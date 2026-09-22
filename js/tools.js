@@ -74,23 +74,23 @@ window.renderCustomQRs = function() {
       const date = new Date(qr.created).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
       const isLink = /^https?:\/\//i.test(qr.content.trim());
       const typeBadge = isLink
-        ? '<span class="inline-flex items-center gap-1 text-[10px] font-bold bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-md shrink-0"><i class="fa-solid fa-link"></i> Link</span>'
-        : '<span class="inline-flex items-center gap-1 text-[10px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md shrink-0"><i class="fa-solid fa-font"></i> Teks</span>';
+        ? '<span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded-md mr-1.5 shrink-0"><i class="fa-solid fa-link"></i> Link</span>'
+        : '<span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded-md mr-1.5 shrink-0"><i class="fa-solid fa-font"></i> Teks</span>';
       const checked = window.selectedCustomQRIds.has(qr.id) ? 'checked' : '';
       const tr = document.createElement('tr');
-      tr.className = 'hover:bg-slate-50 transition-colors';
+      tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors';
       tr.innerHTML = `
-        <td class="px-4 py-3.5 text-center"><input type="checkbox" onchange="window.toggleCustomQRSelection('${qr.id}',this.checked)" ${checked} class="w-4 h-4 text-indigo-600 rounded border-slate-300 cursor-pointer"></td>
-        <td class="px-5 py-3.5 text-sm font-bold text-slate-800">${qr.name}</td>
-        <td class="px-5 py-3.5 text-sm text-slate-600 max-w-[220px]" title="${qr.content}"><div class="flex items-center">${typeBadge}<span class="truncate">${qr.content}</span></div></td>
-        <td class="px-5 py-3.5 text-sm text-slate-500">${date}</td>
+        <td class="px-4 py-3.5 text-center"><input type="checkbox" onchange="window.toggleCustomQRSelection('${qr.id}',this.checked)" ${checked} class="w-4 h-4 text-indigo-600 rounded border-slate-300 dark:border-slate-600 focus:ring-indigo-500 cursor-pointer"></td>
+        <td class="px-5 py-3.5 text-sm font-bold text-slate-800 dark:text-slate-100">${qr.name}</td>
+        <td class="px-5 py-3.5 text-sm text-slate-600 dark:text-slate-300 max-w-[220px]" title="${qr.content}"><div class="flex items-center">${typeBadge}<span class="truncate">${qr.content}</span></div></td>
+        <td class="px-5 py-3.5 text-sm text-slate-500 dark:text-slate-400">${date}</td>
         <td class="px-5 py-3.5 text-center whitespace-nowrap">
           <div class="flex items-center justify-center gap-1">
-            <button onclick="window.previewCustomQR('${qr.id}')" class="w-8 h-8 rounded-lg text-indigo-600 hover:bg-indigo-100 transition-colors" title="Preview"><i class="fa-solid fa-qrcode"></i></button>
-            <button onclick="window.downloadCustomQR('${qr.id}')" class="w-8 h-8 rounded-lg text-purple-600 hover:bg-purple-100 transition-colors" title="Download"><i class="fa-solid fa-download"></i></button>
-            <button onclick="window.printSingleCustomQR('${qr.id}')" class="w-8 h-8 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors" title="Cetak"><i class="fa-solid fa-print"></i></button>
-            <button onclick="window.editCustomQR('${qr.id}')" class="w-8 h-8 rounded-lg text-amber-500 hover:bg-amber-100 transition-colors" title="Edit"><i class="fa-solid fa-pen"></i></button>
-            <button onclick="window.openConfirmModal('custom-qr','${qr.id}')" class="w-8 h-8 rounded-lg text-red-500 hover:bg-red-100 transition-colors" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+            <button onclick="window.previewCustomQR('${qr.id}')" class="w-8 h-8 rounded-lg text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors" title="Preview"><i class="fa-solid fa-qrcode"></i></button>
+            <button onclick="window.downloadCustomQR('${qr.id}')" class="w-8 h-8 rounded-lg text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-500/20 transition-colors" title="Download"><i class="fa-solid fa-download"></i></button>
+            <button onclick="window.printSingleCustomQR('${qr.id}')" class="w-8 h-8 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors" title="Cetak"><i class="fa-solid fa-print"></i></button>
+            <button onclick="window.editCustomQR('${qr.id}')" class="w-8 h-8 rounded-lg text-amber-500 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors" title="Edit"><i class="fa-solid fa-pen"></i></button>
+            <button onclick="window.openConfirmModal('custom-qr','${qr.id}')" class="w-8 h-8 rounded-lg text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors" title="Hapus"><i class="fa-solid fa-trash"></i></button>
           </div>
         </td>`;
       tbody.appendChild(tr);
@@ -216,19 +216,19 @@ window.renderCustomBarcodes = function() {
       const date = new Date(bc.created).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
       const checked = window.selectedCustomBarcodeIds.has(bc.id) ? 'checked' : '';
       const tr = document.createElement('tr');
-      tr.className = 'hover:bg-slate-50 transition-colors';
+      tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors';
       tr.innerHTML = `
-        <td class="px-4 py-3.5 text-center"><input type="checkbox" onchange="window.toggleCustomBarcodeSelection('${bc.id}',this.checked)" ${checked} class="w-4 h-4 text-indigo-600 rounded border-slate-300 cursor-pointer"></td>
-        <td class="px-5 py-3.5 text-sm font-bold text-slate-800">${bc.name}</td>
-        <td class="px-5 py-3.5 text-sm text-slate-600 max-w-[200px] truncate" title="${bc.content}">${bc.content}</td>
-        <td class="px-5 py-3.5 text-sm text-slate-500">${date}</td>
+        <td class="px-4 py-3.5 text-center"><input type="checkbox" onchange="window.toggleCustomBarcodeSelection('${bc.id}',this.checked)" ${checked} class="w-4 h-4 text-indigo-600 rounded border-slate-300 dark:border-slate-600 focus:ring-indigo-500 cursor-pointer"></td>
+        <td class="px-5 py-3.5 text-sm font-bold text-slate-800 dark:text-slate-100">${bc.name}</td>
+        <td class="px-5 py-3.5 text-sm text-slate-600 dark:text-slate-300 max-w-[200px] truncate" title="${bc.content}">${bc.content}</td>
+        <td class="px-5 py-3.5 text-sm text-slate-500 dark:text-slate-400">${date}</td>
         <td class="px-5 py-3.5 text-center whitespace-nowrap">
           <div class="flex items-center justify-center gap-1">
-            <button onclick="window.previewCustomBarcode('${bc.id}')" class="w-8 h-8 rounded-lg text-indigo-600 hover:bg-indigo-100 transition-colors" title="Preview"><i class="fa-solid fa-barcode"></i></button>
-            <button onclick="window.downloadCustomBarcode('${bc.id}')" class="w-8 h-8 rounded-lg text-purple-600 hover:bg-purple-100 transition-colors" title="Download"><i class="fa-solid fa-download"></i></button>
-            <button onclick="window.printSingleCustomBarcode('${bc.id}')" class="w-8 h-8 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors" title="Cetak"><i class="fa-solid fa-print"></i></button>
-            <button onclick="window.editCustomBarcode('${bc.id}')" class="w-8 h-8 rounded-lg text-amber-500 hover:bg-amber-100 transition-colors" title="Edit"><i class="fa-solid fa-pen"></i></button>
-            <button onclick="window.openConfirmModal('custom-barcode','${bc.id}')" class="w-8 h-8 rounded-lg text-red-500 hover:bg-red-100 transition-colors" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+            <button onclick="window.previewCustomBarcode('${bc.id}')" class="w-8 h-8 rounded-lg text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors" title="Preview"><i class="fa-solid fa-barcode"></i></button>
+            <button onclick="window.downloadCustomBarcode('${bc.id}')" class="w-8 h-8 rounded-lg text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-500/20 transition-colors" title="Download"><i class="fa-solid fa-download"></i></button>
+            <button onclick="window.printSingleCustomBarcode('${bc.id}')" class="w-8 h-8 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors" title="Cetak"><i class="fa-solid fa-print"></i></button>
+            <button onclick="window.editCustomBarcode('${bc.id}')" class="w-8 h-8 rounded-lg text-amber-500 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors" title="Edit"><i class="fa-solid fa-pen"></i></button>
+            <button onclick="window.openConfirmModal('custom-barcode','${bc.id}')" class="w-8 h-8 rounded-lg text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors" title="Hapus"><i class="fa-solid fa-trash"></i></button>
           </div>
         </td>`;
       tbody.appendChild(tr);

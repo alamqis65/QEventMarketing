@@ -624,6 +624,32 @@ def _import_users(cur, value):
                     (user_id, feat_key, is_enabled)
                 )
 
+    # The frontend sends the complete user list. Remove database users that are
+    # no longer present, otherwise a deleted user reappears on the next hydrate.
+    if seen_usernames:
+        placeholders = ','.join(['%s'] * len(seen_usernames))
+        cur.execute(f"""
+            SELECT id, username FROM users
+            WHERE username NOT IN ({placeholders}) AND is_super_admin = FALSE
+        """, list(seen_usernames))
+        removed = cur.fetchall()
+        if removed:
+            removed_ids = [row[0] for row in removed]
+            # Preserve events when their owner account is removed by assigning
+            # them to an existing remaining user before deleting the account.
+            cur.execute(
+                "SELECT id FROM users WHERE username IN (" + placeholders + ") ORDER BY id LIMIT 1",
+                list(seen_usernames)
+            )
+            fallback = cur.fetchone()
+            if fallback:
+                for removed_id in removed_ids:
+                    cur.execute("UPDATE events SET owner_user_id = %s WHERE owner_user_id = %s", (fallback[0], removed_id))
+            cur.execute(f"DELETE FROM users WHERE id IN ({','.join(['%s'] * len(removed_ids))})", removed_ids)
+    elif users:
+        # Do not interpret an invalid/empty payload as a request to delete all users.
+        return
+
 
 def _import_events(cur, value):
     events = _safe_json(value, []) if isinstance(value, str) else value

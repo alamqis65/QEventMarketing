@@ -5,7 +5,8 @@
       "Bash(python -m py_compile \"backend\\(api\\)/app/db.py\")",
       "Bash(node --check js/events.js)",
       "Bash(node --check js/main.js)",
-      "Bash(grep -oP 'window\\\\.\\\\w+\\\\s*=\\\\s*function' \"newVersion/app.js\" | sed 's/\\\\s*=\\\\s*function//' | sort -u > /tmp/appjs_funcs.txt && cat /tmp/appjs_funcs.txt | wc -l && cat /tmp/appjs_funcs.txt)"
+      "Bash(grep -oP 'window\\\\.\\\\w+\\\\s*=\\\\s*function' \"newVersion/app.js\" | sed 's/\\\\s*=\\\\s*function//' | sort -u > /tmp/appjs_funcs.txt && cat /tmp/appjs_funcs.txt | wc -l && cat /tmp/appjs_funcs.txt)",
+      "Bash(mkdir -p \"C:\\\\Users\\\\QIS-ITS\\\\Documents\\\\githubs\\\\QEventMarketing\\\\.claude\")"
     ]
   }
 }

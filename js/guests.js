@@ -12,7 +12,14 @@ window.saveGuests = saveGuests;
 
 const guestText = (v) => String(v ?? "");
 const esc = (v) => guestText(v).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;", "'":"&#39;"}[c]));
-const eventForGuests = () => LS.getEvents().find(e => e.id === window.appState?.currentEventId);
+function eventForGuests() { return LS.getEvents().find(e => e.id === window.appState?.currentEventId); }
+function initialsOf(name) {
+  if (!name) return '?';
+  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 const can = key => typeof window.hasFeaturePerm !== "function" || window.hasFeaturePerm(key);
 const nowTime = () => new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
@@ -91,14 +98,16 @@ window.renderGenerateSideStats = function () {
 };
 
 window.renderDashboard = function () {
-  const guests = window.guests || [], present = guests.filter(g => g.scanned).length;
-  ["dash-total", "dash-hadir", "dash-persen"].forEach(id => { if (!document.getElementById(id)) return; });
-  document.getElementById("dash-total")?.replaceChildren(document.createTextNode(guests.length));
+  const guests = window.guests || [], present = guests.filter(g => g.scanned).length, total = guests.length;
+  document.getElementById("dash-total")?.replaceChildren(document.createTextNode(total));
   document.getElementById("dash-hadir")?.replaceChildren(document.createTextNode(present));
-  document.getElementById("dash-persen")?.replaceChildren(document.createTextNode(`${guests.length ? Math.round(present / guests.length * 100) : 0}%`));
+  document.getElementById("dash-persen")?.replaceChildren(document.createTextNode(`${total ? Math.round(present / total * 100) : 0}%`));
   const feedNew = document.getElementById("feed-new-guests"), feedAtt = document.getElementById("feed-attendances");
-  if (feedNew) feedNew.innerHTML = guests.slice().reverse().slice(0, 5).map(g => `<div class="p-3 bg-slate-50 rounded-xl border flex justify-between"><span class="font-bold text-sm">${esc(g.nama)}<small class="block text-xs text-slate-500">${esc(g.rs)}</small></span><span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">Baru</span></div>`).join("");
-  if (feedAtt) feedAtt.innerHTML = guests.filter(g => g.scanned).sort((a,b) => guestText(a.scanTime).localeCompare(guestText(b.scanTime))).slice(-5).reverse().map(g => `<div class="p-3 bg-slate-50 rounded-xl border flex justify-between"><span class="font-bold text-sm">${esc(g.nama)}<small class="block text-xs text-slate-500">${esc(g.rs)}</small></span><span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded">${esc(g.scanTime)}</span></div>`).join("");
+  const emptyFeed = (icon, text) => `<div class="flex flex-col items-center justify-center text-center py-8 text-slate-400 dark:text-slate-500"><i class="fa-solid ${icon} text-2xl mb-2 opacity-60"></i><span class="text-xs font-medium">${text}</span></div>`;
+  const recentNew = guests.slice().reverse().slice(0, 5);
+  if (feedNew) feedNew.innerHTML = recentNew.length ? recentNew.map(g => `<div class="p-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-700 flex items-center gap-3 transition-colors hover:border-indigo-200 dark:hover:border-indigo-500/40"><div class="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 font-bold text-sm flex items-center justify-center shrink-0">${initialsOf(g.nama)}</div><div class="flex flex-col min-w-0 flex-1"><span class="font-bold text-slate-800 dark:text-slate-100 text-sm truncate">${esc(g.nama)}</span><span class="text-xs text-slate-500 dark:text-slate-400 truncate">${esc(g.rs)}</span></div><span class="text-[11px] shrink-0 bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 px-2 py-1 rounded-full font-semibold">Baru</span></div>`).join("") : emptyFeed("fa-user-plus", window.currentLang === "id" ? "Belum ada pendaftar" : "No registrants yet");
+  const recentAtt = guests.filter(g => g.scanned).sort((a,b) => guestText(a.scanTime).localeCompare(guestText(b.scanTime))).slice(-5).reverse();
+  if (feedAtt) feedAtt.innerHTML = recentAtt.length ? recentAtt.map(g => `<div class="p-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-700 flex items-center gap-3 transition-colors hover:border-emerald-200 dark:hover:border-emerald-500/40"><div class="w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-sm flex items-center justify-center shrink-0">${initialsOf(g.nama)}</div><div class="flex flex-col min-w-0 flex-1"><span class="font-bold text-slate-800 dark:text-slate-100 text-sm truncate">${esc(g.nama)}</span><span class="text-xs text-slate-500 dark:text-slate-400 truncate">${esc(g.rs)}</span></div><span class="text-[11px] shrink-0 bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 px-2 py-1 rounded-full font-semibold whitespace-nowrap"><i class="fa-solid fa-clock mr-1"></i>${esc(g.scanTime)}</span></div>`).join("") : emptyFeed("fa-user-check", window.currentLang === "id" ? "Belum ada kehadiran" : "No attendance yet");
   if (typeof chartRS !== "undefined" && chartRS) chartRS.destroy();
   if (typeof chartStatus !== "undefined" && chartStatus) chartStatus.destroy();
   const rsCanvas = document.getElementById("chart-rs"), statusCanvas = document.getElementById("chart-status");
@@ -106,8 +115,11 @@ window.renderDashboard = function () {
   const counts = {}; guests.forEach(g => counts[g.rs] = (counts[g.rs] || 0) + 1);
   let values = Object.entries(counts).sort((a,b) => b[1] - a[1]);
   if (document.getElementById("rs-chart-mode")?.value === "top5") values = values.slice(0, 5);
-  chartRS = new Chart(rsCanvas.getContext("2d"), { type: "bar", data: { labels: values.map(x => x[0]), datasets: [{ data: values.map(x => x[1]), backgroundColor: "#6366f1", borderRadius: 5 }] }, options: { indexAxis: "y", responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
-  chartStatus = new Chart(statusCanvas.getContext("2d"), { type: "doughnut", data: { labels: ["Hadir", "Belum"], datasets: [{ data: [present, guests.length - present], backgroundColor: ["#10b981", "#cbd5e1"], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: "70%" } });
+  const isDarkMode = document.documentElement.classList.contains("dark");
+  const axisTextColor = isDarkMode ? "#cbd5e1" : "#334155", gridColor = isDarkMode ? "rgba(148, 163, 184, 0.15)" : "#e2e8f0", legendTextColor = isDarkMode ? "#e2e8f0" : "#334155";
+  const chartPlugins = typeof ChartDataLabels !== "undefined" ? [ChartDataLabels] : [];
+  chartRS = new Chart(rsCanvas.getContext("2d"), { type: "bar", plugins: chartPlugins, data: { labels: values.map(x => x[0]), datasets: [{ label: window.t("dash_reg"), data: values.map(x => x[1]), backgroundColor: "#6366f1", borderRadius: 6 }] }, options: { indexAxis: "y", responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: { color: "#ffffff", font: { weight: "bold", size: 14 }, formatter: Math.round, anchor: "end", align: "start" } }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1, color: axisTextColor }, grid: { color: gridColor } }, y: { ticks: { color: axisTextColor, autoSkip: false }, grid: { display: false } } } } });
+  chartStatus = new Chart(statusCanvas.getContext("2d"), { type: "doughnut", plugins: chartPlugins, data: { labels: [window.t("dash_att"), "Belum"], datasets: [{ data: [present, total - present], backgroundColor: ["#10b981", isDarkMode ? "#475569" : "#cbd5e1"], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: "70%", plugins: { legend: { position: "bottom", labels: { color: legendTextColor } }, datalabels: { color: "#ffffff", font: { weight: "bold", size: 16 }, formatter: value => value > 0 ? value : "" } } } });
 };
 
 const SORTS = { nama_asc: ["nama", 1], nama_desc: ["nama", -1], rs_asc: ["rs", 1], rs_desc: ["rs", -1], jabatan_asc: ["jabatan", 1], jabatan_desc: ["jabatan", -1] };
@@ -130,33 +142,90 @@ window.clearGuestSelection = function () { window.selectedGuestIds?.clear(); win
 window.updateGuestSelectionUI = selectedUI;
 
 function actionMenu(guest) {
-  const items = [];
-  if (!guest.scanned && can("actionManual")) items.push(["fa-check", "Absen Manual", `window.markAttendanceManual('${esc(guest.id)}')`]);
-  if (can("actionPreviewQR")) items.push(["fa-qrcode", "Preview QR", `window.showQRCode('${esc(guest.id)}','${esc(guest.nama)}','${esc(guest.rs)}','${esc(guest.jabatan)}','${esc(guest.kursi)}')`]);
-  if (can("actionPrintQR")) items.push(["fa-print", "Cetak QR", `window.printSingleQR?.('${esc(guest.id)}')`]);
-  if (can("actionEdit")) items.push(["fa-pen", "Edit", `window.openEditModal('${esc(guest.id)}')`]);
-  if (can("actionDelete")) items.push(["fa-trash", "Hapus", `window.openConfirmModal('guest','${esc(guest.id)}')`]);
-  return items.length ? `<div class="relative inline-flex"><button type="button" onclick="window.toggleGuestActionMenu?.('${esc(guest.id)}',this)" class="w-8 h-8 rounded-lg text-slate-600 hover:bg-slate-100"><i class="fa-solid fa-ellipsis-vertical"></i></button></div>` : "";
+  const hasAnyRowAction = (!guest.scanned && window.hasFeaturePerm?.('actionManual')) || window.hasFeaturePerm?.('actionPreviewQR') || window.hasFeaturePerm?.('actionPrintQR') || window.hasFeaturePerm?.('actionEdit') || window.hasFeaturePerm?.('actionDelete');
+  if (!hasAnyRowAction) return '';
+  return `<div class="relative inline-flex"><button type="button" onclick="window.toggleGuestActionMenu?.('${esc(guest.id)}',this)" class="w-8 h-8 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 mx-0.5 transition-colors" title="Aksi"><i class="fa-solid fa-ellipsis-vertical"></i></button></div>`;
 }
 function createGuestRow(guest, index) {
-  const evt = eventForGuests(), hidden = evt?.hiddenColumns || [], tr = document.createElement("tr"); tr.className = "hover:bg-slate-50 transition-colors";
-  const seat = evt?.needsSeat !== false && !hidden.includes("kursi") ? `<td class="px-5 py-3.5 text-sm">${esc(guest.kursi)}</td>` : "";
-  const rs = hidden.includes("rs") ? "" : `<td class="px-5 py-3.5 text-sm">${esc(guest.rs)}</td>`;
-  const jab = hidden.includes("jabatan") ? "" : `<td class="px-5 py-3.5 text-sm">${esc(guest.jabatan)}</td>`;
-  let hotel = "";
-  if (evt?.needsHotel) {
-    if (!hidden.includes("kamar")) hotel += `<td class="px-5 py-3.5 text-sm">${esc(guest.kamar || "-")}</td>`;
-    if (!hidden.includes("kunci")) hotel += `<td class="px-5 py-3.5 text-center"><input type="checkbox" onchange="window.toggleKey('${esc(guest.id)}',this.checked,this)" ${guest.kunciDiambil ? "checked" : ""} ${!guest.kamar || guest.kamar === "-" ? "disabled" : ""}></td>`;
+  const evt = eventForGuests(), hidden = evt?.hiddenColumns || [], tr = document.createElement("tr");
+  tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors";
+
+  const rsCell = hidden.includes("rs") ? "" : `<td class="px-5 py-3.5 text-sm text-slate-600 dark:text-slate-300">${esc(guest.rs)}</td>`;
+  const jabatanCell = hidden.includes("jabatan") ? "" : `<td class="px-5 py-3.5 text-sm text-slate-600 dark:text-slate-300">${esc(guest.jabatan)}</td>`;
+
+  let seatCell = "";
+  if (evt?.needsSeat !== false && !hidden.includes("kursi")) {
+    seatCell = `<td class="px-5 py-3.5 text-sm text-slate-600 dark:text-slate-300">${esc(guest.kursi)}</td>`;
   }
-  const select = `<td class="px-4 py-3.5 text-center"><input type="checkbox" onchange="window.toggleGuestSelection('${esc(guest.id)}',this.checked)" ${window.selectedGuestIds?.has(guest.id) ? "checked" : ""}></td>`;
-  const download = can("actionDownloadQR") ? `<button onclick="window.downloadSingleQR?.('${esc(guest.id)}','${esc(guest.rs)}','${esc(guest.nama)}')" class="w-8 h-8 text-purple-600" title="Download QR"><i class="fa-solid fa-download"></i></button>` : "";
-  tr.innerHTML = `${select}<td class="px-5 py-3.5 text-sm">${index + 1}</td><td class="px-5 py-3.5 text-sm font-bold text-indigo-600">${esc(guest.id)}</td><td class="px-5 py-3.5 text-sm">${esc(guest.nama)}</td>${rs}${jab}${seat}${hotel}<td class="px-5 py-3.5">${guest.scanned ? "Hadir" : "Belum"}</td><td class="px-5 py-3.5 text-center">${download}${actionMenu(guest)}</td>`;
+
+  let hotelCells = "";
+  if (evt?.needsHotel) {
+    const hasRoom = guest.kamar && guest.kamar !== "-";
+    const checkedAttr = guest.kunciDiambil ? "checked" : "";
+    const disabledAttr = !hasRoom ? "disabled" : "";
+    const opacityClass = !hasRoom ? "opacity-40 cursor-not-allowed bg-slate-200 dark:bg-slate-600" : "cursor-pointer focus:ring-indigo-500";
+    const previewBtn = (guest.kunciDiambil && guest.kunciSignature) ? `<button onclick="window.previewSignature('${esc(guest.id)}')" class="ml-2 text-indigo-500 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors" title="Lihat Bukti Tanda Tangan"><i class="fa-solid fa-file-signature text-base"></i></button>` : "";
+
+    const kamarCell = hidden.includes("kamar") ? "" : `<td class="px-5 py-3.5 text-sm text-slate-600 dark:text-slate-300">${esc(guest.kamar || "-")}</td>`;
+    const kunciCell = hidden.includes("kunci") ? "" : `<td class="px-5 py-3.5 text-center">
+      <div class="flex items-center justify-center">
+        <input type="checkbox" onchange="window.toggleKey('${esc(guest.id)}', this.checked, this)" ${checkedAttr} ${disabledAttr} class="w-4 h-4 text-indigo-600 rounded border-slate-300 dark:border-slate-600 shadow-sm ${opacityClass}" title="${!hasRoom ? "Isi nomor kamar terlebih dahulu" : ""}">
+        ${previewBtn}
+      </div>
+    </td>`;
+    hotelCells = kamarCell + kunciCell;
+  }
+
+  const statusBadge = guest.scanned
+    ? '<span class="inline-flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs px-2.5 py-1 rounded-md font-semibold"><i class="fa-solid fa-circle-check text-[11px]"></i>Hadir</span>'
+    : '<span class="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs px-2.5 py-1 rounded-md font-semibold"><i class="fa-regular fa-circle text-[11px]"></i>Belum</span>';
+
+  const downloadQRBtn = can("actionDownloadQR") ? `<button onclick="window.downloadSingleQR('${esc(guest.id)}','${esc(guest.rs)}','${esc(guest.nama)}')" class="w-8 h-8 rounded-lg text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-500/20 mx-0.5 transition-colors" title="Download QR"><i class="fa-solid fa-download"></i></button>` : "";
+
+  const selectCell = `<td class="px-4 py-3.5 text-center"><input type="checkbox" onchange="window.toggleGuestSelection('${esc(guest.id)}',this.checked)" ${window.selectedGuestIds?.has(guest.id) ? "checked" : ""} class="w-4 h-4 text-indigo-600 rounded border-slate-300 dark:border-slate-600 focus:ring-indigo-500 cursor-pointer"></td>`;
+
+  tr.innerHTML = `${selectCell}
+    <td class="px-5 py-3.5 text-sm text-slate-500 dark:text-slate-400">${index + 1}</td>
+    <td class="px-5 py-3.5 text-sm"><span class="font-mono font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-1 rounded-md text-xs">${esc(guest.id)}</span></td>
+    <td class="px-5 py-3.5 text-sm">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-bold flex items-center justify-center shrink-0">${initialsOf(guest.nama)}</span>
+        <span class="font-medium text-slate-700 dark:text-slate-200">${esc(guest.nama)}</span>
+      </div>
+    </td>
+    ${rsCell}${jabatanCell}${seatCell}${hotelCells}
+    <td class="px-5 py-3.5">${statusBadge}</td>
+    <td class="px-5 py-3.5 text-center whitespace-nowrap"><div class="flex items-center justify-center">${downloadQRBtn}${actionMenu(guest)}</div></td>`;
   return tr;
 }
 function createAttendedRow(guest, index) {
-  const evt = eventForGuests(), hidden = evt?.hiddenColumns || [], tr = document.createElement("tr"); tr.className = "hover:bg-emerald-50/50 transition-colors";
-  const cell = (key, val) => hidden.includes(key) ? "" : `<td class="px-5 py-3.5 text-sm">${esc(val)}</td>`;
-  tr.innerHTML = `<td class="px-5 py-3.5 text-sm">${index + 1}</td><td class="px-5 py-3.5 text-sm font-bold text-emerald-600">${esc(guest.id)}</td><td class="px-5 py-3.5 text-sm">${esc(guest.nama)}</td>${cell("rs",guest.rs)}${cell("jabatan",guest.jabatan)}${evt?.needsSeat !== false ? cell("kursi",guest.kursi) : ""}${evt?.needsHotel ? cell("kamar",guest.kamar || "-") : ""}<td class="px-5 py-3.5 text-sm">${esc(guest.scanTime)}</td><td class="px-5 py-3.5 text-center"><button onclick="window.removeAttendance('${esc(guest.id)}')" class="text-xs text-red-600 border border-red-200 py-1.5 px-3 rounded-lg">Batal</button></td>`;
+  const evt = eventForGuests(), hidden = evt?.hiddenColumns || [], tr = document.createElement("tr");
+  tr.className = "hover:bg-emerald-50/50 dark:hover:bg-emerald-500/5 transition-colors";
+
+  const rsCell = hidden.includes("rs") ? "" : `<td class="px-5 py-3.5 text-sm text-slate-600 dark:text-slate-300">${esc(guest.rs)}</td>`;
+  const jabatanCell = hidden.includes("jabatan") ? "" : `<td class="px-5 py-3.5 text-sm text-slate-600 dark:text-slate-300">${esc(guest.jabatan)}</td>`;
+
+  let seatCell = "";
+  if (evt?.needsSeat !== false && !hidden.includes("kursi")) {
+    seatCell = `<td class="px-5 py-3.5 text-sm text-slate-600 dark:text-slate-300">${esc(guest.kursi)}</td>`;
+  }
+
+  let hotelCell = "";
+  if (evt?.needsHotel && !hidden.includes("kamar")) {
+    hotelCell = `<td class="px-5 py-3.5 text-sm text-slate-600 dark:text-slate-300">${esc(guest.kamar || "-")}</td>`;
+  }
+
+  tr.innerHTML = `<td class="px-5 py-3.5 text-sm text-slate-500 dark:text-slate-400">${index + 1}</td>
+    <td class="px-5 py-3.5 text-sm"><span class="font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-md text-xs">${esc(guest.id)}</span></td>
+    <td class="px-5 py-3.5 text-sm">
+      <div class="flex items-center gap-2.5">
+        <span class="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center justify-center shrink-0">${initialsOf(guest.nama)}</span>
+        <span class="font-medium text-slate-700 dark:text-slate-200">${esc(guest.nama)}</span>
+      </div>
+    </td>
+    ${rsCell}${jabatanCell}${seatCell}${hotelCell}
+    <td class="px-5 py-3.5 text-sm font-medium text-slate-600 dark:text-slate-300"><i class="fa-regular fa-clock mr-1 text-emerald-500 dark:text-emerald-400"></i>${esc(guest.scanTime)}</td>
+    <td class="px-5 py-3.5 text-center"><button onclick="window.removeAttendance('${esc(guest.id)}')" class="text-xs bg-red-50 dark:bg-red-500/10 hover:bg-red-600 dark:hover:bg-red-600 text-red-600 dark:text-red-400 hover:text-white dark:hover:text-white border border-red-200 dark:border-red-500/30 py-1.5 px-3 rounded-lg shadow-sm flex items-center mx-auto transition-colors"><i class="fa-solid fa-xmark mr-1.5"></i> Batal</button></td>`;
   return tr;
 }
 window.renderTable = function () {
@@ -164,8 +233,18 @@ window.renderTable = function () {
   const search = (document.getElementById("search-attended")?.value || "").toLowerCase();
   const list = sortGuests(filteredGuests(), document.getElementById("sort-list")?.value || "default");
   const attended = sortGuests(window.guests.filter(g => g.scanned && [g.nama,g.id,g.rs].some(v => guestText(v).toLowerCase().includes(search))), document.getElementById("sort-attended")?.value || "default");
-  const pageSize = 10; window.currentPageGuests = Math.max(1, Math.min(window.currentPageGuests || 1, Math.max(1, Math.ceil(list.length / pageSize)))); window.currentPageAttended = Math.max(1, Math.min(window.currentPageAttended || 1, Math.max(1, Math.ceil(attended.length / pageSize))));
-  document.getElementById("total-guests") && (document.getElementById("total-guests").innerText = `Total: ${list.length}`); document.getElementById("total-attended") && (document.getElementById("total-attended").innerText = `Hadir: ${attended.length}`);
+  const pageSize = 10;
+  window.currentPageGuests = Math.max(1, Math.min(window.currentPageGuests || 1, Math.max(1, Math.ceil(list.length / pageSize))));
+  window.currentPageAttended = Math.max(1, Math.min(window.currentPageAttended || 1, Math.max(1, Math.ceil(attended.length / pageSize))));
+  const totalGuests = window.guests.length, totalAttended = window.guests.filter(g => g.scanned).length, totalPending = totalGuests - totalAttended;
+  document.getElementById("total-guests") && (document.getElementById("total-guests").innerText = `Total: ${list.length}`);
+  document.getElementById("total-attended") && (document.getElementById("total-attended").innerText = `Hadir: ${attended.length}`);
+  document.getElementById("stat-total-guests") && (document.getElementById("stat-total-guests").innerText = totalGuests);
+  document.getElementById("stat-hadir-guests") && (document.getElementById("stat-hadir-guests").innerText = totalAttended);
+  document.getElementById("stat-belum-guests") && (document.getElementById("stat-belum-guests").innerText = totalPending);
+  const progress = totalGuests ? Math.round(totalAttended / totalGuests * 100) : 0;
+  const progressBar = document.getElementById("attended-progress-bar"); if (progressBar) progressBar.style.width = `${progress}%`;
+  const progressText = document.getElementById("attended-progress-text"); if (progressText) progressText.innerText = `${progress}%`;
   tbody.replaceChildren(...list.slice((window.currentPageGuests-1)*pageSize, window.currentPageGuests*pageSize).map((g,i) => createGuestRow(g,(window.currentPageGuests-1)*pageSize+i)));
   attendedBody.replaceChildren(...attended.slice((window.currentPageAttended-1)*pageSize, window.currentPageAttended*pageSize).map((g,i) => createAttendedRow(g,(window.currentPageAttended-1)*pageSize+i)));
   document.getElementById("empty-state")?.classList.toggle("hidden", !!list.length); document.getElementById("empty-state-attended")?.classList.toggle("hidden", !!attended.length);
@@ -173,9 +252,40 @@ window.renderTable = function () {
 };
 
 window.toggleGuestActionMenu = function (id, button) {
-  document.getElementById("guest-action-menu")?.remove(); const g = window.guests.find(x => x.id === id); if (!g) return;
-  const items = []; if (!g.scanned && can("actionManual")) items.push(["fa-check","Absen Manual",() => window.markAttendanceManual(id)]); if (can("actionPreviewQR")) items.push(["fa-qrcode","Preview QR",() => window.showQRCode(id,g.nama,g.rs,g.jabatan,g.kursi)]); if (can("actionPrintQR")) items.push(["fa-print","Cetak QR",() => window.printSingleQR?.(id)]); if (can("actionEdit")) items.push(["fa-pen","Edit",() => window.openEditModal(id)]); if (can("actionDelete")) items.push(["fa-trash","Hapus",() => window.openConfirmModal("guest",id)]); if (!items.length) return;
-  const menu = document.createElement("div"); menu.id = "guest-action-menu"; menu.className = "fixed z-[90] w-44 bg-white border rounded-xl shadow-xl py-1"; items.forEach(([icon,label,fn]) => { const b=document.createElement("button"); b.className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50"; b.innerHTML=`<i class="fa-solid ${icon} w-5"></i>${label}`; b.onclick=()=>{menu.remove();fn();}; menu.appendChild(b); }); document.body.appendChild(menu); const r=button.getBoundingClientRect(); menu.style.left=`${Math.max(8,r.right-176)}px`; menu.style.top=`${r.bottom+5}px`;
+  const existing = document.getElementById("guest-action-menu");
+  const wasOpenForThis = existing && existing.dataset.guestId === id;
+  window.closeGuestActionMenu();
+  if (wasOpenForThis) return;
+
+  const g = window.guests.find(x => x.id === id); if (!g) return;
+  const items = [];
+  if (!g.scanned && can("actionManual")) items.push({ icon: "fa-check", label: "Absen Manual", color: "text-emerald-600 dark:text-emerald-400", onClick: `window.markAttendanceManual('${esc(g.id)}')` });
+  if (can("actionPreviewQR")) items.push({ icon: "fa-qrcode", label: "Preview QR", color: "text-indigo-600 dark:text-indigo-400", onClick: `window.showQRCode('${esc(g.id)}','${esc(g.nama)}','${esc(g.rs)}','${esc(g.jabatan)}','${esc(g.kursi)}')` });
+  if (can("actionPrintQR")) items.push({ icon: "fa-print", label: "Cetak QR", color: "text-slate-600 dark:text-slate-300", onClick: `window.printSingleQR?.('${esc(g.id)}')` });
+  if (can("actionEdit")) items.push({ icon: "fa-pen", label: "Edit", color: "text-amber-500 dark:text-amber-400", onClick: `window.openEditModal('${esc(g.id)}')` });
+  if (can("actionDelete")) items.push({ icon: "fa-trash", label: "Hapus", color: "text-red-500 dark:text-red-400", onClick: `window.openConfirmModal('guest','${esc(g.id)}')` });
+  if (!items.length) return;
+
+  const menu = document.createElement("div"); menu.id = "guest-action-menu"; menu.dataset.guestId = id;
+  menu.className = "fixed z-[90] w-44 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl py-1.5";
+  menu.style.animation = "fadeSlideUp 0.15s ease forwards";
+  menu.innerHTML = items.map(it => `<button type="button" onclick="${it.onClick}; window.closeGuestActionMenu();" class="w-full flex items-center gap-2.5 px-3.5 py-2 text-sm font-medium ${it.color} hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-left"><i class="fa-solid ${it.icon} w-4 text-center"></i>${it.label}</button>`).join("");
+  document.body.appendChild(menu);
+
+  const r = button.getBoundingClientRect();
+  const menuWidth = 176;
+  let left = r.right - menuWidth; if (left < 8) left = 8;
+  if (left + menuWidth > window.innerWidth - 8) left = window.innerWidth - menuWidth - 8;
+  let top = r.bottom + 6;
+  const menuHeightEstimate = items.length * 38 + 12;
+  if (top + menuHeightEstimate > window.innerHeight - 8) top = r.top - menuHeightEstimate - 6;
+  menu.style.left = left + "px"; menu.style.top = top + "px";
+
+  setTimeout(() => {
+    window._closeGuestActionMenuHandler = function(ev) { if (!menu.contains(ev.target)) window.closeGuestActionMenu(); };
+    document.addEventListener("click", window._closeGuestActionMenuHandler, true);
+    window.addEventListener("scroll", window.closeGuestActionMenu, { once: true, capture: true });
+  }, 0);
 };
 window.markAttendanceManual = function (id) { const g=window.guests.find(x=>x.id===id); if(!g||g.scanned||!can("actionManual"))return; confirmAction("Absen Peserta Ini?",`Kehadiran untuk ${g.nama} akan dicatat sekarang.`,()=>{g.scanned=true;g.scanTime=nowTime();if(saveGuests()){window.renderTable();window.renderScanStats?.();window.showToast?.(`Selamat datang, ${g.nama}! Kehadiran Anda tercatat.`,`success`);}}); };
 window.markAllAttendance = function () { if(!can("markAllAttendance"))return; const a=window.guests.filter(g=>!g.scanned); if(!a.length)return; confirmAction("Absen Semua Peserta?",`${a.length} peserta akan ditandai hadir.`,()=>{const t=nowTime();a.forEach(g=>{g.scanned=true;g.scanTime=t;});saveGuests();window.renderTable();}); };

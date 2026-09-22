@@ -85,40 +85,54 @@ window.getDefaultTabName = function() {
 window.openUserPermissions = function(username) {
   const user = LS.getUsers().find(u => u.username === username);
   if (!user) return;
-  const container = document.getElementById('permissions-container');
-  if (!container) return;
-  const permissions = user.permissions || {};
+  if (user.isSuperAdmin) return window.showToast(window.currentLang === 'id' ? 'Super Admin selalu memiliki akses penuh' : 'Super Admin always has full access', 'info');
+
+  const currentUser = window.appState.currentUser;
+  const amISuper = currentUser?.isSuperAdmin === true;
+  if (username === currentUser?.username) return window.showToast(window.currentLang === 'id' ? 'Tidak dapat mengubah akses fitur diri sendiri' : 'You cannot change your own feature access', 'error');
+  if (!amISuper && user.role !== 'public') return window.showToast(window.currentLang === 'id' ? 'Admin hanya dapat mengubah akses fitur untuk user Public' : 'Admins can only manage Public users', 'error');
+
+  const target = document.getElementById('perm-target-username'); if (target) target.value = username;
+  const nameEl = document.getElementById('perm-user-name'); if (nameEl) nameEl.innerText = `${user.name} (@${user.username})`;
+  const permissions = { ...getDefaultPermissions(), ...(user.permissions || {}) };
+  const container = document.getElementById('user-permissions-list'); if (!container) return;
   container.innerHTML = FEATURE_PERMISSION_GROUPS.map(group => `
-    <div class="mb-4">
-      <h4 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">${group.label}</h4>
-      <div class="space-y-2">
+    <div>
+      <p class="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">${group.label}</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
         ${group.items.map(item => `
-          <label class="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 p-3 cursor-pointer">
-            <span class="text-sm text-slate-700 dark:text-slate-200"><i class="fa-solid ${item.icon} w-5 text-slate-400"></i>${item.label}</span>
-            <input type="checkbox" class="feature-permission-checkbox accent-indigo-600" data-feature-key="${item.key}" ${permissions[item.key] !== false ? 'checked' : ''}>
+          <label class="flex items-center gap-2.5 p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-sm">
+            <input type="checkbox" class="perm-checkbox w-4 h-4 shrink-0 text-indigo-600 rounded border-slate-300 dark:border-slate-600 focus:ring-indigo-500 focus:ring-offset-0 cursor-pointer" data-perm-key="${item.key}" ${permissions[item.key] ? 'checked' : ''}>
+            <i class="fa-solid ${item.icon} text-slate-400 dark:text-slate-500 w-4 text-center text-xs shrink-0"></i>
+            <span class="text-slate-700 dark:text-slate-200 font-medium truncate">${item.label}</span>
           </label>`).join('')}
       </div>
     </div>`).join('');
+  const toggle = document.getElementById('perm-toggle-all'); if (toggle) toggle.checked = ALL_FEATURE_KEYS.every(k => permissions[k]);
   container.dataset.username = username;
   window.openModalAnimated('modal-user-permissions');
 };
 
 window.toggleAllPermissions = function (checked) {
-  document.querySelectorAll('#permissions-container .perm-checkbox, #permissions-container .feature-permission-checkbox').forEach(cb => { cb.checked = checked; });
+  document.querySelectorAll('#user-permissions-list .perm-checkbox').forEach(cb => { cb.checked = checked; });
 };
 
 window.saveUserPermissions = function() {
-  const container = document.getElementById('permissions-container');
-  const username = container?.dataset.username;
-  if (!username) return;
+  const container = document.getElementById('user-permissions-list');
+  const username = document.getElementById('perm-target-username')?.value || container?.dataset.username;
+  if (!username || !container) return;
   const users = LS.getUsers();
-  const user = users.find(u => u.username === username);
-  if (!user) return;
-  user.permissions = {};
-  container.querySelectorAll('.feature-permission-checkbox').forEach(el => {
-    user.permissions[el.dataset.featureKey] = el.checked;
-  });
+  const idx = users.findIndex(u => u.username === username);
+  if (idx === -1) return;
+  const permissions = {};
+  container.querySelectorAll('.perm-checkbox').forEach(cb => { permissions[cb.dataset.permKey] = cb.checked; });
+  users[idx].permissions = permissions;
   LS.setUsers(users);
+  if (window.appState.currentUser?.username === username) {
+    window.appState.currentUser.permissions = permissions;
+    sessionStorage.setItem('qis_session', JSON.stringify(window.appState.currentUser));
+    if (window.appState.currentEventId) window.applyFeaturePermissions();
+  }
   window.closeModalAnimated('modal-user-permissions');
-  window.showToast(window.currentLang === 'id' ? 'Hak akses disimpan!' : 'Permissions saved!', 'success');
+  window.showToast(`${window.currentLang === 'id' ? 'Akses fitur untuk' : 'Feature access for'} ${users[idx].name} ${window.currentLang === 'id' ? 'berhasil diperbarui!' : 'updated successfully!'}`, 'success');
 };

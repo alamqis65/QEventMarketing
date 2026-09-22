@@ -1,0 +1,327 @@
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f8fafc; 
+            color: #334155;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        html.dark body { background-color: #0f172a; color: #e2e8f0; }
+
+        /* ===== Mobile Browser Viewport Fix ===== */
+        /* h-screen Tailwind (100vh) bisa terpotong/tidak akurat di browser HP karena
+           address bar yang muncul-hilang. dvh (dynamic viewport height) mengikuti
+           tinggi layar yang benar-benar terlihat. Baris kedua adalah fallback yang
+           akan diabaikan otomatis oleh browser lama yang belum mendukung dvh. */
+        html, body { height: 100vh !important; }
+        @supports (height: 100dvh) {
+            html, body { height: 100dvh !important; }
+        }
+
+        /* Cegah auto-zoom Safari/iOS saat mengetuk input berukuran font < 16px */
+        @media (max-width: 640px) {
+            input, select, textarea { font-size: 16px !important; }
+        }
+        
+        /* Transisi antar-halaman utama (login/loading/library/app/settings/tools).
+           SEBELUMNYA: .view-hidden memakai `display:none`, yang memutus transisi opacity/transform
+           di tengah jalan (browser tidak bisa meng-interpolasi dari/ke `display:none`), sehingga
+           perpindahan halaman terasa "patah" alih-alih fade halus. Sekarang cukup opacity + transform +
+           posisi/pointer-events — tanpa properti diskret yang mengganggu — sehingga crossfade benar-benar
+           terlihat saat kelasnya ditukar (tidak perlu perubahan di JS sama sekali). */
+        .view-transition { transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1), transform 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
+        .view-hidden { opacity: 0; transform: translateY(10px) scale(0.99); pointer-events: none; position: absolute; }
+        .view-visible { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; position: relative; }
+        @media (prefers-reduced-motion: reduce) {
+            .view-transition { transition: opacity 0.2s linear; }
+            .view-hidden, .view-visible { transform: none; }
+        }
+        
+        /* Modals Animation */
+        .modal-backdrop { transition: opacity 0.3s ease; opacity: 0; }
+        .modal-backdrop.show { opacity: 1; }
+        .modal-content { transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease; transform: scale(0.8); opacity: 0; }
+        .modal-content.show { transform: scale(1); opacity: 1; }
+        
+        /* Modern Tabs with Animation (segmented pill-track style) */
+        .tab-btn { transition: all 0.2s ease; }
+        .tab-btn:hover { color: #4f46e5; }
+        html.dark .tab-btn:hover { color: #a5b4fc; }
+        .tab-active { color: #4f46e5 !important; background-color: #ffffff; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08); font-weight: 600; }
+        html.dark .tab-active { background-color: #1e293b; color: #a5b4fc !important; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); }
+        
+        .app-tab { display: none; opacity: 0; }
+        .app-tab.active { display: block; animation: fadeSlideUp 0.4s ease forwards; }
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== Panel Navigasi Sidebar Pengaturan Aplikasi ===== */
+        /* Tombol kategori di sisi kiri halaman Pengaturan; setiap posisi/menu diberi garis
+           border tipis supaya terlihat sebagai kotak yang jelas terpisah satu sama lain.
+           State aktif ditandai background lembut + border + warna teks indigo, konsisten
+           dengan aksen warna utama aplikasi. */
+        .settings-nav-active {
+            background-color: #eef2ff !important; color: #4f46e5 !important; font-weight: 700;
+            border-color: #c7d2fe !important;
+        }
+        html.dark .settings-nav-active { background-color: rgba(99, 102, 241, 0.14) !important; color: #a5b4fc !important; border-color: rgba(99, 102, 241, 0.4) !important; }
+        .settings-nav-active span:first-child { box-shadow: 0 1px 3px rgba(79, 70, 229, 0.25); }
+        .settings-section { animation: fadeSlideUp 0.35s ease forwards; }
+        
+        /* ===== Modern Minimalist Scrollbar (global) ===== */
+        * { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+        html.dark * { scrollbar-color: #475569 transparent; }
+
+        *::-webkit-scrollbar { width: 8px; height: 8px; }
+        *::-webkit-scrollbar-track { background: transparent; }
+        *::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1; border-radius: 20px;
+            border: 2px solid transparent; background-clip: padding-box;
+            transition: background-color 0.2s;
+        }
+        *::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
+        *::-webkit-scrollbar-corner { background: transparent; }
+        html.dark *::-webkit-scrollbar-thumb { background-color: #475569; }
+        html.dark *::-webkit-scrollbar-thumb:hover { background-color: #64748b; }
+
+        .feed-container::-webkit-scrollbar { width: 6px; }
+        
+        /* Inputs */
+        input:focus, select:focus, textarea:focus { border-color: #6366f1 !important; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important; outline: none; }
+        html.dark input:focus, html.dark select:focus, html.dark textarea:focus { box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.35) !important; }
+        
+        /* Enhanced Scanner UI — berlaku untuk #reader (scan kehadiran), #reader-scan-generic
+           (modal "Scan QR"/"Scan Barcode" di Custom Generator), maupun #reader-kiosk (Mode Kiosk),
+           supaya tampilannya konsisten & mengikuti warna bawaan sistem (terang/gelap) di seluruh
+           aplikasi. html5-qrcode membuat ID elemen anak dengan pola `${containerId}__nama-bagian`,
+           jadi setiap selector diturunkan juga untuk prefix itu. */
+        #reader, #reader-scan-generic, #reader-kiosk {
+            width: 100%; max-width: 500px; margin: 0 auto; border: 1.5px dashed #c7d2fe !important; border-radius: 20px;
+            padding: 32px 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            background: linear-gradient(180deg, rgba(99, 102, 241, 0.04), rgba(139, 92, 246, 0.02)) !important;
+        }
+        html.dark #reader, html.dark #reader-scan-generic, html.dark #reader-kiosk { border-color: #4338ca !important; background: linear-gradient(180deg, rgba(99, 102, 241, 0.08), rgba(30, 41, 59, 0.4)) !important; }
+        html.dark #reader__dashboard_section_csr span, html.dark #reader-scan-generic__dashboard_section_csr span, html.dark #reader-kiosk__dashboard_section_csr span { color: #cbd5e1 !important; }
+        #reader img, #reader-scan-generic img, #reader-kiosk img { margin: 0 auto 16px auto !important; display: block !important; width: 56px; opacity: 0.7; }
+        #reader__dashboard_section_csr, #reader-scan-generic__dashboard_section_csr, #reader-kiosk__dashboard_section_csr { text-align: center !important; }
+        #reader__dashboard_section_csr div, #reader__dashboard_section_csr span,
+        #reader-scan-generic__dashboard_section_csr div, #reader-scan-generic__dashboard_section_csr span,
+        #reader-kiosk__dashboard_section_csr div, #reader-kiosk__dashboard_section_csr span { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center !important; width: 100%; }
+        /* Feed kamera & area pemindaian dibuat rounded agar menyatu dengan bingkai viewfinder di sekelilingnya */
+        #reader video, #reader__scan_region, #reader-scan-generic video, #reader-scan-generic__scan_region, #reader-kiosk video, #reader-kiosk__scan_region { border-radius: 14px; overflow: hidden; }
+        #reader__scan_region img, #reader-scan-generic__scan_region img, #reader-kiosk__scan_region img { width: 56px; }
+        #reader button, #reader-scan-generic button, #reader-kiosk button {
+            background-color: #4f46e5; color: white; padding: 10px 24px; border-radius: 12px; margin: 10px auto;
+            cursor: pointer; border: none; font-weight: 700; font-size: 14px; transition: all 0.2s; display: inline-block;
+            box-shadow: 0 2px 8px rgba(79, 70, 229, 0.35);
+        }
+        #reader button:hover, #reader-scan-generic button:hover, #reader-kiosk button:hover { background-color: #4338ca; transform: translateY(-1px); box-shadow: 0 6px 12px rgba(79, 70, 229, 0.4); }
+        #reader a, #reader-scan-generic a, #reader-kiosk a { color: #4f46e5 !important; text-decoration: none; margin: 16px auto; display: inline-block; font-weight: 600; font-size: 14px; transition: color 0.2s; }
+        html.dark #reader a, html.dark #reader-scan-generic a, html.dark #reader-kiosk a { color: #a5b4fc !important; }
+        #reader a:hover, #reader-scan-generic a:hover, #reader-kiosk a:hover { color: #3730a3 !important; text-decoration: underline; }
+        html.dark #reader a:hover, html.dark #reader-scan-generic a:hover, html.dark #reader-kiosk a:hover { color: #c7d2fe !important; }
+        #reader select, #reader-scan-generic select, #reader-kiosk select {
+            margin: 12px auto; display: block; padding: 10px 14px; border-radius: 12px; border: 1.5px solid #cbd5e1;
+            outline: none; font-size: 14px; width: 80%; max-width: 300px; background-color: #ffffff; color: #334155;
+            font-weight: 500; cursor: pointer; transition: border-color 0.2s;
+        }
+        html.dark #reader select, html.dark #reader-scan-generic select, html.dark #reader-kiosk select { background-color: #1e293b; border-color: #475569; color: #e2e8f0; }
+        #reader input[type="file"], #reader-scan-generic input[type="file"], #reader-kiosk input[type="file"] { margin: 16px auto; display: block; max-width: 100%; font-size: 13px; color: #64748b; }
+        html.dark #reader input[type="file"], html.dark #reader-scan-generic input[type="file"], html.dark #reader-kiosk input[type="file"] { color: #94a3b8; }
+        /* Reskin tombol "Choose File" bawaan browser agar senada dengan tombol lain di aplikasi */
+        #reader input[type="file"]::file-selector-button, #reader-scan-generic input[type="file"]::file-selector-button, #reader-kiosk input[type="file"]::file-selector-button {
+            background-color: #4f46e5; color: #fff; border: none; padding: 8px 16px; border-radius: 10px;
+            font-weight: 600; font-size: 13px; cursor: pointer; transition: background-color 0.2s; margin-right: 10px;
+        }
+        #reader input[type="file"]::file-selector-button:hover, #reader-scan-generic input[type="file"]::file-selector-button:hover, #reader-kiosk input[type="file"]::file-selector-button:hover { background-color: #4338ca; }
+        
+        /* Toast Animation */
+        .toast-hidden { transform: translateY(150%) scale(0.9); opacity: 0; }
+        .toast-visible { transform: translateY(0) scale(1); opacity: 1; }
+        
+        /* Spinner */
+        .spinner { border: 4px solid rgba(199, 210, 254, 0.3); border-radius: 50%; border-top: 4px solid #4f46e5; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* ===== Halaman Loading — Scanner QR Beranimasi ===== */
+        /* Bingkai sudut yang "bernapas" (scale halus) + garis pindai yang bergerak naik-turun,
+           supaya loading terasa seperti sedang memindai — konsisten dengan motif viewfinder
+           QR pada .auth-scanframe di halaman login, bukan spinner generik. */
+        .loading-scanframe { animation: loading-frame-pulse 2.2s ease-in-out infinite; }
+        @keyframes loading-frame-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .loading-scanline {
+            top: 10%;
+            animation: loading-scanline-move 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+        }
+        @keyframes loading-scanline-move {
+            0% { top: 10%; opacity: 0; }
+            15% { opacity: 1; }
+            50% { top: 82%; opacity: 1; }
+            85% { opacity: 1; }
+            100% { top: 10%; opacity: 0; }
+        }
+        .loading-dot { animation: loading-dot-bounce 1.3s ease-in-out infinite; }
+        @keyframes loading-dot-bounce {
+            0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
+            40% { transform: translateY(-4px); opacity: 1; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .loading-scanframe { animation: none; }
+            .loading-scanline { animation: none; opacity: 0.6; top: 45%; }
+            .loading-dot { animation: none; opacity: 0.7; }
+        }
+        
+        /* Profile Upload Overlay */
+        .profile-upload-overlay { background: rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.2s; border-radius: 50%; }
+        .profile-wrapper:hover .profile-upload-overlay { opacity: 1; cursor: pointer; }
+        
+        /* Custom Animations */
+        @keyframes success-bounce { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-5px) scale(1.15); } }
+        .animate-success { animation: success-bounce 1s ease-in-out infinite; }
+
+        /* ===== Live Update Pulse (Cross-Tab Sync) ===== */
+        /* Kedipan halus & singkat pada angka statistik saat diperbarui otomatis dari tab/jendela
+           browser lain (lihat window.broadcastGuestsChanged / BroadcastChannel di app.js) - penanda
+           visual non-intrusif bahwa data baru saja berubah, tanpa toast/notifikasi yang bisa
+           mengganggu kalau Mode Kiosk sedang ramai memindai berturut-turut. */
+        @keyframes stat-live-pulse {
+            0% { transform: scale(1); }
+            35% { transform: scale(1.2); color: #10b981; }
+            100% { transform: scale(1); }
+        }
+        .stat-live-pulse { animation: stat-live-pulse 0.55s cubic-bezier(0.34, 1.56, 0.64, 1); display: inline-block; }
+        @media (prefers-reduced-motion: reduce) {
+            .stat-live-pulse { animation: none; }
+        }
+        
+        @keyframes authFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .auth-form-active { display: block; animation: authFadeIn 0.4s ease-out forwards; }
+        
+        .library-enter { animation: fadeSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+        
+        /* Cropper Base Constraint */
+        .cropper-container { max-width: 100%; max-height: 100%; }
+
+        /* ===== Halaman Login — Bingkai Sudut ala Viewfinder QR ===== */
+        /* Motif ini sengaja dibuat halus (breathing opacity) sebagai elemen ciri khas EventQ
+           di panel foto background login, mengingatkan pada bingkai pemindai QR saat check-in. */
+        .auth-scanframe { animation: scanframe-breathe 4s ease-in-out infinite; }
+        @keyframes scanframe-breathe {
+            0%, 100% { opacity: 0.55; }
+            50% { opacity: 1; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .auth-scanframe { animation: none; opacity: 0.85; }
+            .library-enter { animation: none !important; opacity: 1 !important; transform: none !important; }
+        }
+
+        /* ===== Print QR Card Styles ===== */
+        #print-area { display: none; }
+        .print-qr-card {
+            position: relative; width: 260px; box-sizing: border-box; border: 2px solid #1e293b; border-radius: 0;
+            padding: 18px 16px; text-align: center; font-family: 'Inter', sans-serif; break-inside: avoid; page-break-inside: avoid;
+        }
+        /* Bingkai kartu cetak bisa dimatikan lewat Pengaturan > Cetak QR Code (switch "Bingkai Kartu Cetak") */
+        .print-qr-card.no-frame { border: none; border-radius: 0; }
+        .print-card-event { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #4f46e5; margin: 0 0 10px 0; }
+        .print-card-body { display: flex; flex-direction: column; align-items: center; }
+        .print-card-qr { width: 160px; height: 160px; object-fit: contain; margin: 0 auto 10px auto; display: block; }
+        .print-card-info { display: flex; flex-direction: column; align-items: center; }
+        .print-card-name { font-size: 16px; font-weight: 800; color: #0f172a; margin: 0 0 4px 0; word-break: break-word; }
+        .print-card-rs, .print-card-jabatan, .print-card-kursi { font-size: 12px; color: #334155; margin: 0 0 4px 0; word-break: break-word; }
+        .print-card-id { font-size: 10px; color: #94a3b8; margin: 8px 0 0 0; letter-spacing: 0.03em; }
+        .print-single-wrap { display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .print-grid-wrap { display: flex; flex-wrap: wrap; gap: 14px; justify-content: flex-start; align-content: flex-start; }
+        /* Dipakai khusus oleh Cetak Semua (bulk print) ketika admin sudah mengatur layout kolom x baris
+           lewat modal "Atur Layout Grid Cetak". grid-template-columns diisi lewat inline style oleh JS
+           sesuai jumlah kolom yang dipilih, sehingga tidak mengganggu .print-grid-wrap versi flex biasa
+           yang masih dipakai Custom QR/Barcode Generator. */
+        .print-grid-fixed { display: grid !important; gap: 14px; justify-content: start; align-content: start; }
+        .print-page-break { page-break-after: always; break-after: page; }
+
+        /* PENYEMPURNAAN GRID CETAK MASSAL: sebelumnya .print-qr-card selalu memakai lebar piksel tetap
+           (260px / 400px landscape) walau admin memilih banyak kolom lewat modal "Atur Layout Grid
+           Cetak". Karena grid CSS tidak menyusutkan elemen anak yang punya lebar tetap, memilih 4+
+           kolom di kertas Portrait membuat total lebar grid melebihi lebar kertas fisik — sebagian
+           kartu di sisi kanan berisiko terpotong saat benar-benar dicetak ke printer. Di sini, KHUSUS
+           saat memakai grid tetap (bukan pada Custom QR/Barcode Generator yang masih pakai flex-wrap
+           biasa), lebar kartu & gambar QR dibuat FLUID mengikuti lebar kolom grid yang sesungguhnya,
+           sehingga berapa pun kolom yang dipilih, kartu akan selalu pas di dalam kolomnya. */
+        .print-grid-fixed .print-qr-card,
+        .print-grid-fixed .print-qr-card.landscape { width: 100%; min-width: 0; box-sizing: border-box; }
+        .print-grid-fixed .print-card-qr {
+            width: 100%; max-width: 160px; height: auto; aspect-ratio: 1 / 1;
+        }
+        .print-grid-fixed .print-qr-card.landscape .print-card-qr {
+            width: 100%; max-width: 130px; height: auto; aspect-ratio: 1 / 1; margin: 0; flex-shrink: 1; min-width: 0;
+        }
+        .print-grid-fixed .print-qr-card.landscape .print-card-body { min-width: 0; }
+        .print-grid-fixed .print-qr-card.landscape .print-card-info { min-width: 0; }
+
+        /* Kotak pratinjau kecil pada modal "Atur Layout Grid Cetak", merepresentasikan tiap kartu QR.
+           Bentuk defaultnya mengikuti kartu Portrait (agak tinggi); varian .landscape dipakai saat
+           orientasi cetak Landscape sedang aktif, supaya proporsinya lebih dekat ke bentuk kartu asli. */
+        .print-layout-preview-box { width: 28px; height: 34px; border-radius: 6px; background: linear-gradient(135deg, #6366f1, #8b5cf6); opacity: 0.85; transition: width 0.15s ease, height 0.15s ease; }
+        .print-layout-preview-box.landscape { width: 42px; height: 24px; }
+
+        /* Badge logo event di pojok kanan atas kartu cetak — muncul hanya bila diaktifkan di Pengaturan
+           DAN event yang bersangkutan sudah punya logo tersimpan (lihat window.buildPrintQRCard). */
+        .print-card-logo {
+            position: absolute; top: 10px; right: 10px; width: 34px; height: 34px; object-fit: contain;
+            border-radius: 8px; background: #fff; padding: 3px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        }
+        /* Beri ruang aman di sisi kanan nama event supaya teksnya tidak lari ke bawah logo saat panjang */
+        .print-qr-card.has-logo .print-card-event { padding-right: 42px; }
+        .print-qr-card.landscape.has-logo .print-card-event { padding-right: 48px; }
+
+        /* Kartu orientasi Landscape: QR di kiri, informasi di kanan */
+        .print-qr-card.landscape { width: 400px; text-align: left; }
+        .print-qr-card.landscape .print-card-event { text-align: left; }
+        .print-qr-card.landscape .print-card-body { flex-direction: row; align-items: center; gap: 16px; }
+        .print-qr-card.landscape .print-card-qr { margin: 0; width: 130px; height: 130px; flex-shrink: 0; }
+        .print-qr-card.landscape .print-card-info { align-items: flex-start; text-align: left; }
+
+        /* ===== Cetak Custom QR Code & Custom Barcode (Tools) ===== */
+        /* Konten custom QR bisa berupa link/teks panjang, jadi diberi class terpisah dari .print-card-id
+           (dipakai untuk ID peserta yang selalu pendek) supaya bisa word-wrap dengan aman. */
+        .print-card-desc { font-size: 11px; color: #64748b; margin: 8px 0 0 0; word-break: break-word; }
+        /* Barcode CODE128 melebar mengikuti panjang konten, jadi kartunya dibuat lebih lebar dari kartu QR
+           dan gambar barcode-nya memakai lebar penuh agar tetap mudah dipindai saat dicetak. */
+        .print-card-barcode-wrap { width: 320px; }
+        .print-card-barcode-img { width: 100%; max-width: 280px; height: auto; max-height: 110px; object-fit: contain; margin: 0 auto 10px auto; display: block; }
+
+        @media print {
+            body * { visibility: hidden; }
+            #print-area, #print-area * { visibility: visible; }
+            #print-area { display: block !important; position: absolute; top: 0; left: 0; width: 100%; margin: 0; padding: 16px; }
+            .print-qr-card { border-color: #000; }
+            .print-qr-card.no-frame { border: none; }
+        }
+
+        /* ===== Mode Kiosk — animasi transisi panel hasil scan ===== */
+        @keyframes kioskFadeIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+        .kiosk-fade-in { animation: kioskFadeIn 0.35s ease forwards; }
+        @media (prefers-reduced-motion: reduce) {
+            .kiosk-fade-in { animation: none; }
+        }
+
+        /* ===== Mode Kiosk — animasi transisi saat berpindah jenis kiosk (Absensi <-> Pengambilan)
+           lewat tombol shortcut di header. Layar scan (judul/sub-judul/bar statistik) sedikit meluncur
+           & memudar masuk, sementara ikon tombol shortcut berputar sekali sebagai umpan balik klik. ===== */
+        @keyframes kioskTypeSwitchIn { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .kiosk-type-switch-in { animation: kioskTypeSwitchIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes kioskSwitchBtnSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .kiosk-switch-btn-spin { animation: kioskSwitchBtnSpin 0.5s ease; }
+        @media (prefers-reduced-motion: reduce) {
+            .kiosk-type-switch-in, .kiosk-switch-btn-spin { animation: none; }
+        }
+
+        /* ===== Peringatan Nomor Khusus/Unik kembar (Form Pendaftaran Peserta & modal Edit Data Peserta)
+           lihat window.checkCustomNumberFieldDuplicate di app.js. Pakai !important supaya konsisten
+           menang dari kelas border Tailwind bawaan input (urutan utility class dari CDN Tailwind tidak
+           bisa dipastikan, jadi tidak aman mengandalkan urutan kelas biasa untuk override warna border). */
+        .custom-number-dup-border { border-color: #f59e0b !important; }
+        html.dark .custom-number-dup-border { border-color: #f59e0b !important; }

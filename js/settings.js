@@ -268,6 +268,7 @@ window.openSettingsView = function() {
     const isAdmin = window.appState?.currentUser?.role === 'admin';
     const userSection = document.getElementById('admin-user-manage-section'); if (userSection) userSection.style.display = isAdmin ? 'flex' : 'none';
     window.loadPrintQRSettingsUI?.(); window.applyAuthCaptionSetting(); window.loadBgIntervalSettingsUI(); window.renderStorageMeter(); window.loadKioskPinSettingsUI(); window.loadKioskResetDurationSettingUI(); window.loadKioskTTSLangSettingUI(); window.loadKioskPickupSignatureSettingUI();
+    if (isAdmin) window.updateSettingsUserCountBadge?.();
     if (window.switchSettingsSection) window.switchSettingsSection(isAdmin ? 'users' : 'appearance');
     switchMainViewAnimated('view-settings');
 };

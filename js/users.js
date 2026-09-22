@@ -190,7 +190,17 @@ window.handleUserFormSubmit = function (e) {
 };
 
 window.deleteUserAcc = function (username) {
-  window.openConfirmModal("user", username);
+  const target = LS.getUsers().find((u) => u.username === username);
+  if (!target) return;
+  if (target.isSuperAdmin === true) {
+    window.showToast(window.currentLang === 'id' ? 'Akun Super Admin tidak dapat dihapus!' : 'The Super Admin account cannot be deleted!', 'error');
+    return;
+  }
+  if (window.appState?.currentUser?.username === username) {
+    window.showToast(window.currentLang === 'id' ? 'Akun yang sedang digunakan tidak dapat dihapus!' : 'The account currently in use cannot be deleted!', 'error');
+    return;
+  }
+  window.openConfirmModal('user', username);
 };
 
 window.promptExportUsers = function () {
@@ -243,7 +253,9 @@ window.executeExportUsers = function (e) {
   }
 };
 
-// ── Settings page: user count badge & summary list ───────────────────
+const userText = (v) => String(v ?? "");
+const userEsc = (v) => userText(v).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;", "'":"&#39;"}[c]));
+
 window.updateSettingsUserCountBadge = function () {
   const el = document.getElementById("settings-user-count");
   if (el) el.innerText = LS.getUsers().length;
@@ -259,8 +271,17 @@ window.renderUserManageSummary = function () {
     return;
   }
   container.innerHTML = users.map((u) => {
-    const badge = u.role === "admin" ? (u.isSuperAdmin === true ? "Super Admin" : "Admin") : "Public";
+    const isTargetSuper = u.isSuperAdmin === true;
+    const roleBadge = u.role === "admin"
+      ? (isTargetSuper
+        ? '<span class="text-[10px] bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-md font-bold uppercase tracking-wide shrink-0"><i class="fa-solid fa-crown mr-1"></i>Super Admin</span>'
+        : '<span class="text-[10px] bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-md font-bold uppercase tracking-wide shrink-0">Admin</span>')
+      : '<span class="text-[10px] bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-md font-bold uppercase tracking-wide shrink-0">Public</span>';
     const initial = (u.name || u.username || "?").trim().charAt(0).toUpperCase();
-    return `<div class="flex items-center gap-3 p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"><div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 font-bold text-xs flex items-center justify-center shrink-0">${initial}</div><span class="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate flex-1">${u.name || u.username}</span><span class="text-[10px] font-bold uppercase">${badge}</span></div>`;
+    return `<div class="flex items-center gap-3 p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors">
+      <div class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0">${initial}</div>
+      <span class="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate flex-1" title="${esc(u.name || u.username)}">${esc(u.name || u.username)}</span>
+      ${roleBadge}
+    </div>`;
   }).join("");
 };

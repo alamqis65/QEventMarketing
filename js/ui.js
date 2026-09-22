@@ -212,7 +212,7 @@ window.executeDelete = function() {
     } else if (type === 'user') {
         let users = LS.getUsers(); const userToDelete = users.find(u => u.username === id);
         if(userToDelete && userToDelete.isSuperAdmin) window.showToast('Akun Super Admin tidak dapat dihapus!', 'error');
-        else { users = users.filter(u => u.username !== id); LS.setUsers(users); window.renderManageUsers(); window.showToast('Akun berhasil dihapus', 'warning'); }
+        else { users = users.filter(u => u.username !== id); LS.setUsers(users); window.renderManageUsers(); window.updateSettingsUserCountBadge?.(); window.showToast('Akun berhasil dihapus', 'warning'); }
     } else if (type === 'custom-qr') {
         let qrs = LS.getCustomQRs(); qrs = qrs.filter(q => q.id !== id); LS.setCustomQRs(qrs); window.renderCustomQRs(); window.showToast('QR Code kustom berhasil dihapus', 'error');
     } else if (type === 'custom-barcode') {
