@@ -1,0 +1,24 @@
+[Unit]
+Description=EventQ Backend API (FastAPI bridge to PostgreSQL)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=eventq
+Group=eventq
+WorkingDirectory=/opt/eventq-backend
+EnvironmentFile=/opt/eventq-backend/.env
+ExecStart=/opt/eventq-backend/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 3000
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=eventq-backend
+
+# Basic hardening (optional but recommended)
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

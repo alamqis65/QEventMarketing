@@ -1,0 +1,11 @@
+{
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "always"
+  },
+  "cSpell.language": "en,id-id",
+  "cSpell.words": ["diexport", "sess"],
+  "python-envs.defaultEnvManager": "ms-python.python:system",
+  "typescript.suppressDeprecationWarnings": true
+}
