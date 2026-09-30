@@ -681,7 +681,9 @@ window.onKioskScanSuccess = function(t) {
             saveGuests(); status = 'success';
         } else { status = 'already'; }
 
-        window.renderKioskStats(); window.renderScanStats(); window.renderTable();
+        window.renderKioskStats?.();
+        window.renderScanStats?.();
+        window.renderTable?.();
         window.showKioskResult(status, g, evt);
     } else {
         window.showKioskResult('notfound', null, evt);

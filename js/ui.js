@@ -263,8 +263,9 @@ window.toggleImportDuplicateList = function() {
     if (!listEl) return;
     const willShow = listEl.classList.contains('hidden');
     if (willShow) {
-        const rows = window.importModeDuplicateRows || [];
-        listEl.innerHTML = rows.map(r => `<div class="px-3 py-2 flex items-center justify-between gap-3 text-[12px]"><div class="min-w-0"><p class="font-semibold text-slate-700 dark:text-slate-200 truncate">${r.nama}</p><p class="text-slate-400 dark:text-slate-500 truncate">${r.rs}</p></div><span class="shrink-0 font-mono text-[10px] text-slate-400 dark:text-slate-500">${r.questId ? r.questId : (window.currentLang === 'id' ? 'Duplikat di file' : 'Duplicate in file')}</span></div>`).join('');
+        // Rendering baris duplikat didelegasikan ke window.renderImportDuplicateList (js/guests.js),
+        // yang meng-escape nama/RS sebelum dimasukkan ke innerHTML (aman dari data Excel yang jahil).
+        window.renderImportDuplicateList?.();
         listEl.classList.remove('hidden'); if (toggleBtn) toggleBtn.innerText = window.currentLang === 'id' ? 'Sembunyikan' : 'Hide';
     } else { listEl.classList.add('hidden'); if (toggleBtn) toggleBtn.innerText = window.currentLang === 'id' ? 'Lihat Data' : 'View Data'; }
 };

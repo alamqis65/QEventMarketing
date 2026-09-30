@@ -267,6 +267,24 @@ def _migrate_events(cur, kv):
             """, (e.get('id'), _resolve_user_id(cur, uid)))
 
 
+def _normalize_custom_numbers(raw):
+    """Accept both shapes used by the app and return a list of (field_id, value):
+    - frontend object map: {"field1": "ABC", ...}   (current js/guests.js form)
+    - legacy list records:  [{"id"|"fieldId": ..., "value": ...}, ...]
+    """
+    if isinstance(raw, dict):
+        return [(str(k), v) for k, v in raw.items() if k and v is not None]
+    if isinstance(raw, list):
+        pairs = []
+        for cn in raw:
+            if isinstance(cn, dict):
+                fid = cn.get('fieldId', cn.get('id', ''))
+                if fid:
+                    pairs.append((str(fid), cn.get('value')))
+        return pairs
+    return []
+
+
 def _migrate_guests(cur, kv):
     events_raw = kv.get('qis_events')
     events = _safe_json(events_raw, [])
@@ -306,8 +324,8 @@ def _migrate_guests(cur, kv):
             ))
 
             # Custom field values
-            custom_numbers = g.get('customNumbers', [])
-            if not custom_numbers:
+            custom_pairs = _normalize_custom_numbers(g.get('customNumbers'))
+            if not custom_pairs:
                 continue
             # Look up the guest_id from the DB
             cur.execute(
@@ -319,14 +337,12 @@ def _migrate_guests(cur, kv):
                 continue
             guest_db_id = guest_row[0]
 
-            for cn in custom_numbers:
-                cf_id = cn.get('fieldId', cn.get('id', ''))
-                if cf_id:
-                    cur.execute("""
-                        INSERT INTO guest_custom_field_values (guest_id, event_custom_field_id, value)
-                        VALUES (%s, %s, %s)
-                        ON CONFLICT (guest_id, event_custom_field_id) DO NOTHING
-                    """, (guest_db_id, cf_id, cn.get('value')))
+            for cf_id, cf_value in custom_pairs:
+                cur.execute("""
+                    INSERT INTO guest_custom_field_values (guest_id, event_custom_field_id, value)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (guest_id, event_custom_field_id) DO NOTHING
+                """, (guest_db_id, cf_id, cf_value))
 
 
 def _migrate_custom_qrs(cur, kv):
@@ -446,7 +462,8 @@ def state_get_all():
                     'seatLabelType': row[7],
                     'needsHotel': row[8],
                     'needsKeySignature': row[9],
-                    'hiddenColumns': json.loads(row[10]) if row[10] else None,
+                    # psycopg2 already deserializes JSONB; only parse if a string slips through
+                    'hiddenColumns': _safe_json(row[10], None) if isinstance(row[10], str) else row[10],
                     'ownerUserId': row[11],
                 }
                 # Custom fields
@@ -500,9 +517,8 @@ def state_get_all():
                             WHERE event_id = %s AND guest_code = %s LIMIT 1
                         )
                     """, (eid, g[0]))
-                    guest['customNumbers'] = [
-                        {'id': r[0], 'value': r[1]} for r in cur.fetchall()
-                    ]
+                    # Frontend expects customNumbers as an object map {fieldId: value}
+                    guest['customNumbers'] = {r[0]: r[1] for r in cur.fetchall()}
                     guests.append(guest)
                 result[f'qis_guests_{eid}'] = json.dumps(guests)
 
@@ -764,6 +780,7 @@ def _import_guests(cur, event_id, value):
             g.get('kunciDiambil', g.get('key_picked_up', False)),
             g.get('keyPickedUpBy', g.get('key_picked_up_by')),
             g.get('keySignatureUrl', g.get('key_signature_url')),
+            g.get('pickupScanned', g.get('pickup_scanned', False)),
             _empty_to_none(g.get('pickupScanTime', g.get('pickup_scan_time'))),
             g.get('scanned', g.get('attendance_scanned', False)),
             _empty_to_none(g.get('scanTime', g.get('attendance_scan_time'))),
@@ -775,13 +792,11 @@ def _import_guests(cur, event_id, value):
         if g_row:
             guest_db_id = g_row[0]
             cur.execute("DELETE FROM guest_custom_field_values WHERE guest_id = %s", (guest_db_id,))
-            for cn in g.get('customNumbers', []):
-                cf_id = cn.get('fieldId', cn.get('id', ''))
-                if cf_id:
-                    cur.execute(
-                        "INSERT INTO guest_custom_field_values (guest_id, event_custom_field_id, value) VALUES (%s, %s, %s)",
-                        (guest_db_id, cf_id, cn.get('value'))
-                    )
+            for cf_id, cf_value in _normalize_custom_numbers(g.get('customNumbers')):
+                cur.execute(
+                    "INSERT INTO guest_custom_field_values (guest_id, event_custom_field_id, value) VALUES (%s, %s, %s)",
+                    (guest_db_id, cf_id, cf_value)
+                )
 
     # Remove guests not in the new list
     if seen_codes:

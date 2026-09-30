@@ -6,7 +6,17 @@
       "Bash(node --check js/events.js)",
       "Bash(node --check js/main.js)",
       "Bash(grep -oP 'window\\\\.\\\\w+\\\\s*=\\\\s*function' \"newVersion/app.js\" | sed 's/\\\\s*=\\\\s*function//' | sort -u > /tmp/appjs_funcs.txt && cat /tmp/appjs_funcs.txt | wc -l && cat /tmp/appjs_funcs.txt)",
-      "Bash(mkdir -p \"C:\\\\Users\\\\QIS-ITS\\\\Documents\\\\githubs\\\\QEventMarketing\\\\.claude\")"
+      "Bash(mkdir -p \"C:\\\\Users\\\\QIS-ITS\\\\Documents\\\\githubs\\\\QEventMarketing\\\\.claude\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" --max-time 15 \"https://qis.medinfras.com:8088/api/state\")",
+      "Bash(curl -s --max-time 15 \"https://qis.medinfras.com:8088/api/state\")",
+      "Bash(curl -sv --max-time 15 \"https://qis.medinfras.com:8088/api/state\")",
+      "Bash(curl -sk --max-time 20 \"https://qis.medinfras.com:8088/api/state\" -o /tmp/state.json -w \"HTTP %{http_code}\\\\n\")",
+      "Read(//tmp/**)",
+      "Bash(curl -s --max-time 20 \"http://192.168.90.93:3000/api/state\" -o /tmp/state.json -w \"HTTP %{http_code}\\\\n\")",
+      "Bash(sleep 3; curl -s --max-time 20 \"http://192.168.90.93:3000/api/state\" -o /tmp/state.json -w \"HTTP %{http_code}\\\\n\" ; head -c 300 /tmp/state.json ; echo)",
+      "Bash(ipconfig)",
+      "Bash(netstat -ano)",
+      "Bash(python -c \"import ast,sys; ast.parse\\(open\\('app/db.py',encoding='utf-8'\\).read\\(\\)\\); print\\('syntax OK'\\)\")"
     ]
   }
 }
