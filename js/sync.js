@@ -8,7 +8,12 @@ window.tabId = Date.now().toString(36) + Math.random().toString(36).slice(2);
 window.broadcastGuestsChanged = function(eventId) {
   if (!window.syncChannel || !eventId) return;
   try {
-    window.syncChannel.postMessage({ type: 'guests-changed', eventId, tabId: window.tabId, ts: Date.now() });
+    // Each tab keeps its own in-memory Cache, so just saying "something changed"
+    // made receiving tabs re-read their OWN stale copy. Ship the data itself.
+    window.syncChannel.postMessage({
+      type: 'guests-changed', eventId, tabId: window.tabId, ts: Date.now(),
+      value: Cache.get(`qis_guests_${eventId}`)
+    });
   } catch (e) { /* BroadcastChannel may be closed during unload */ }
 };
 
@@ -17,6 +22,7 @@ if (window.syncChannel) {
     const msg = e.data;
     if (!msg || msg.type !== 'guests-changed' || msg.tabId === window.tabId) return;
     if (msg.eventId !== window.appState.currentEventId) return;
+    if (typeof msg.value === 'string') Cache.applyRemote(`qis_guests_${msg.eventId}`, msg.value);
     window.guests = LS.getGuests(msg.eventId);
     window.refreshLiveViewsAfterSync();
   };

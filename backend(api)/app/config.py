@@ -31,3 +31,9 @@ API_PORT = int(os.getenv("API_PORT", "3000"))
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*")
 
 DEBUG = _bool(os.getenv("DEBUG"), False)
+
+# Large-removal guard: when a save would drop more than 20% of existing rows the API answers
+# 409 and the frontend asks for confirmation again. The app has no bulk-delete feature and
+# every delete already has its own confirmation dialog, so the extra prompt only got in the
+# way (deleting 1 of 2 guests = 50%). Set REMOVAL_GUARD=true in .env to bring it back.
+REMOVAL_GUARD = _bool(os.getenv("REMOVAL_GUARD"), False)

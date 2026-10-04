@@ -13,10 +13,14 @@ Run in production via IIS reverse proxy at /EventQ/api.
 """
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional, Union
+import logging
 
 from . import db, config
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="EventQ Backend", version="2.0.0")
 
@@ -56,12 +60,30 @@ def _is_valid_key(key: str) -> bool:
 
 @app.on_event("startup")
 def on_startup():
+    # Make sure application logs actually reach stdout/stderr (journalctl
+    # under systemd) instead of dying silently on the root logger.
+    if not logging.getLogger().handlers:
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s %(levelname)s %(name)s %(message)s",
+        )
     db.init_pool()
     db.init_db()
 
 
 class StateBody(BaseModel):
     value: Union[str, list, dict, None] = None
+    # Set once by the frontend after the user explicitly confirmed a large
+    # destructive replacement (the server answers 409 without it).
+    confirm: bool = False
+
+
+def _payload_error(msg: str) -> JSONResponse:
+    return JSONResponse(status_code=400, content={"saved": False, "detail": msg})
+
+
+def _conflict_response(exc: db.ConflictError) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"saved": False, **exc.detail})
 
 
 # ─── Health check ───────────────────────────────────────────────────────
@@ -79,6 +101,7 @@ def get_all_state():
     try:
         return db.state_get_all()
     except Exception as e:
+        logger.exception("GET /api/state failed: %s", e)
         raise HTTPException(status_code=500, detail=f"DB error: {e}")
 
 
@@ -90,6 +113,7 @@ def get_state(key: str):
     try:
         all_state = db.state_get_all()
     except Exception as e:
+        logger.exception("GET /api/state/%s failed: %s", key, e)
         raise HTTPException(status_code=500, detail=f"DB error: {e}")
     if key not in all_state:
         raise HTTPException(status_code=404, detail="Key not found")
@@ -98,25 +122,43 @@ def get_state(key: str):
 
 @app.put("/api/state/{key}")
 def put_state(key: str, body: StateBody):
-    """Import a full JSON payload for a logical state key."""
+    """Import a full JSON payload for a logical state key.
+
+    Malformed payloads are rejected with 400 {saved: false} *before* any
+    DELETE can run; a destructive replacement (>20% of existing rows removed)
+    is rejected with 409 + counts unless body.confirm is true.
+    """
     if not _is_valid_key(key):
         raise HTTPException(status_code=400, detail=f"Invalid key: {key}")
     if body.value is None:
-        raise HTTPException(status_code=400, detail="Missing 'value' field")
+        return _payload_error("Missing 'value' field")
     try:
-        db.state_set(key, body.value)
+        db.state_set(key, body.value, confirm=body.confirm)
+    except db.PayloadError as e:
+        logger.warning("PUT /api/state/%s rejected payload: %s", key, e)
+        return _payload_error(str(e))
+    except db.ConflictError as e:
+        return _conflict_response(e)
     except Exception as e:
+        logger.exception("PUT /api/state/%s failed: %s", key, e)
         raise HTTPException(status_code=500, detail=f"DB error: {e}")
     return {"key": key, "saved": True}
 
 
 @app.delete("/api/state/{key}")
-def delete_state(key: str):
-    """Remove data for a logical state key."""
+def delete_state(key: str, confirm: bool = False):
+    """Remove data for a logical state key.
+
+    `confirm=true` acknowledges a full wipe (>20% of existing rows); without
+    it the server answers 409 for keys whose deletion removes everything.
+    """
     if not _is_valid_key(key):
         raise HTTPException(status_code=400, detail=f"Invalid key: {key}")
     try:
-        db.state_delete(key)
+        db.state_delete(key, confirm=confirm)
+    except db.ConflictError as e:
+        return _conflict_response(e)
     except Exception as e:
+        logger.exception("DELETE /api/state/%s failed: %s", key, e)
         raise HTTPException(status_code=500, detail=f"DB error: {e}")
     return {"key": key, "deleted": True}

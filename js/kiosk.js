@@ -331,6 +331,7 @@ window.enterKioskMode = function(type) {
     if (!window.appState.currentEventId) return;
 
     window.currentKioskType = (type === 'pickup') ? 'pickup' : (type === 'check') ? 'check' : 'attendance';
+    window.stopGuestAutoRefresh?.(); // Kiosk menutupi daftar peserta, hentikan polling.
     window.stopScanner(); // hentikan scanner tab biasa agar kamera tidak bentrok
 
     // Prime AudioContext & daftar suara TTS memakai gestur klik ini (tombol Mode Kiosk),
@@ -572,6 +573,9 @@ window.exitKioskMode = function() {
 
     const view = document.getElementById('kiosk-mode-view');
     view.classList.add('hidden'); view.classList.remove('flex');
+    // Keluar dari Kiosk: kembalikan polling auto-refresh bila tab aktif
+    // masih Data Peserta / Daftar Hadir.
+    window.guestAutoRefreshSync?.();
 };
 
 window.renderKioskStats = function() {

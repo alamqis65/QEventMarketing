@@ -1,10 +1,18 @@
 // EventQ - Participant registration, tables, attendance, QR actions and Excel I/O.
 // Storage is intentionally accessed through LS only; LS owns persistence/error handling.
 
+// Versi data lokal — bertambah setiap kali ada perubahan lewat saveGuests().
+// Dipakai window.refreshGuestData (baik manual maupun auto-refresh 5 detik) untuk
+// membatalkan penerapan hasil fetch bila ada edit baru di tengah request berjalan.
+let guestLocalVersion = 0;
+
 function saveGuests() {
   const id = window.appState?.currentEventId;
   if (!id) return false;
   const saved = LS.setGuests(id, window.guests || []);
+  // Tandai bahwa data lokal berubah; auto-refresh yang sedang menunggu respons
+  // server akan membatalkan penerapannya (lihat window.refreshGuestData).
+  guestLocalVersion++;
   if (saved !== false && typeof window.broadcastGuestsChanged === "function")
     window.broadcastGuestsChanged(id);
   return saved !== false;
@@ -27,6 +35,58 @@ function matchKey(nama, rs) {
 }
 function eventForGuests() {
   return LS.getEvents().find((e) => e.id === window.appState?.currentEventId);
+}
+
+// ===== Nomor Khusus/Unik (custom fields) <-> kolom Excel =====
+// Template, export, dan import memakai kolom tambahan bernama sesuai label tiap field kustom
+// event. Field ini bebas diisi (tidak ada aturan unik) - nilainya disimpan apa adanya sebagai teks.
+const RESERVED_XLSX_HEADERS = new Set(
+  ["no", "quest id", "nama lengkap", "asal rs", "jabatan", "no kursi", "no meja",
+   "no kamar", "kunci", "status", "waktu absen"],
+);
+// Daftar { field, header } dengan nama kolom yang dijamin tidak bentrok dengan kolom standar
+// maupun dengan field kustom lain yang labelnya sama. Dipakai bersama template, export & import
+// supaya nama kolom selalu konsisten di ketiganya.
+function customColumns(evt) {
+  const used = new Set();
+  return (Array.isArray(evt?.customNumberFields) ? evt.customNumberFields : []).map((f) => {
+    let header = guestText(f.label).trim() || "Nomor Khusus";
+    if (RESERVED_XLSX_HEADERS.has(header.toLowerCase())) header += " (Custom)";
+    let candidate = header, n = 2;
+    while (used.has(candidate.toLowerCase())) candidate = `${header} (${n++})`;
+    used.add(candidate.toLowerCase());
+    return { field: f, header: candidate };
+  });
+}
+// Excel menyimpan angka murni sebagai number; ubah ke teks tanpa notasi ilmiah (mis. 3.2E+15)
+// supaya NIK/nomor registrasi yang terlanjur tersimpan sebagai angka tetap terbaca utuh.
+function cellToText(v) {
+  if (v === null || v === undefined) return "";
+  if (typeof v === "number") {
+    if (Number.isInteger(v) && Math.abs(v) < 1e21) return BigInt(v).toString();
+    return String(v);
+  }
+  return String(v).trim();
+}
+// Baca nilai semua kolom custom dari satu baris Excel (pencocokan nama kolom tidak peka
+// huruf besar/kecil & spasi di pinggir). Kolom kosong dilewati.
+function readCustomNumbers(row, evt) {
+  const cols = customColumns(evt);
+  if (!cols.length) return {};
+  const byHeader = {};
+  Object.keys(row).forEach((k) => { byHeader[String(k).trim().toLowerCase()] = row[k]; });
+  const out = {};
+  cols.forEach(({ field, header }) => {
+    const text = cellToText(byHeader[header.toLowerCase()]);
+    if (text) out[field.id] = text;
+  });
+  return out;
+}
+// Tambahkan kolom custom ke satu baris export (nilai tetap string supaya Excel menyimpannya sebagai teks).
+function addCustomColumns(row, guest, evt) {
+  customColumns(evt).forEach(({ field, header }) => {
+    row[header] = guestText(guest.customNumbers?.[field.id]);
+  });
 }
 function initialsOf(name) {
   if (!name) return "?";
@@ -615,38 +675,132 @@ window.renderTable = function () {
 };
 
 // Refresh data peserta dari server tanpa reload halaman (menjaga event/tab aktif).
-window.refreshGuestData = async function (btn) {
+// Dipanggil manual lewat tombol (btn dipassing + toast), dan otomatis tiap 5 detik
+// oleh interval di startGuestAutoRefresh (lihat blok Auto-refresh di bawah).
+window.refreshGuestData = async function (btn, opts = {}) {
+  const silent = opts.silent === true;
   const eventId = window.appState?.currentEventId;
-  if (!eventId) return;
+  if (!eventId) return false;
+  if (guestAutoRefreshBusy) return false; // jangan tumpuk request
+  guestAutoRefreshBusy = true;
   const key = `qis_guests_${eventId}`;
   const icon = btn?.querySelector("i");
   const originalClass = icon?.className;
+  const badgeIcons = document.querySelectorAll(".auto-refresh-icon");
+  const guestLocalVersionAtStart = guestLocalVersion;
   if (icon) {
     icon.classList.remove("fa-rotate");
     icon.classList.add("fa-spin", "fa-spinner");
     btn.disabled = true;
   }
+  badgeIcons.forEach((i) => i.classList.add("fa-spin"));
   try {
     const res = await fetch(`${window.API_BASE}/state/${encodeURIComponent(key)}`);
+    // 404 = event ini belum pernah tersimpan di server (mis. event lama yang masih
+    // lokal). Jangan dianggap error, dan jangan menimpa data lokal yang masih ada.
+    if (res.status === 404) return false;
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     const raw = typeof data.value === "string" ? data.value : JSON.stringify(data.value ?? []);
-    Cache._store[key] = raw;
+    // Jangan pernah timpa data lokal bila: (1) ada perubahan lokal saat request
+    // berjalan (edit/import/absen yang baru saja disimpan), (2) key punya write
+    // pending/in-flight, atau (3) write sedang gagal tersimpan (biarkan Cache
+    // yang menangani). Tanpa pengecekan ini, auto-refresh tiap 5 detik bisa saja
+    // menimpa edit yang baru diketik pengguna.
+    if (guestLocalVersion !== guestLocalVersionAtStart) return false;
+    const prev = Cache.get(key); // diambil SEBELUM applyRemote menimpa store
+    if (Cache._failed.has(key) || !Cache.applyRemote(key, raw)) return false;
+    if (prev === raw) return true; // tidak ada perubahan: tidak perlu render ulang
     window.guests = JSON.parse(raw || "[]");
     window.renderTable();
     window.renderScanStats?.();
-    window.showToast("Data peserta dimuat ulang dari server.", "success");
+    if (!silent) window.showToast("Data peserta dimuat ulang dari server.", "success");
+    return true;
   } catch (err) {
     console.error("refreshGuestData failed:", err);
-    window.showToast("Gagal memuat ulang data dari server!", "error");
+    // Mode silent (auto-refresh) tidak boleh memunculkan toast: jaringan yang
+    // lagi buruk akan membuat toast error beruntun tiap 5 detik.
+    if (!silent) window.showToast("Gagal memuat ulang data dari server!", "error");
+    return false;
   } finally {
+    guestAutoRefreshBusy = false;
     if (icon && originalClass) {
       icon.classList.remove("fa-spin", "fa-spinner");
       icon.className = originalClass;
     }
     if (btn) btn.disabled = false;
+    // Berhenti memutar ikon badge; kalau di tengah request pengguna pindah tab
+    // (timer sudah dihentikan oleh stopGuestAutoRefresh), baris ini juga aman
+    // karena hanya menghapus kelas yang memang sudah dipasang di awal.
+    badgeIcons.forEach((i) => i.classList.remove("fa-spin"));
   }
 };
+
+// ===== Auto-refresh data peserta (tiap 5 detik) =====
+// Menggantikan tombol Refresh manual: data ditarik ulang dari server selama
+// pengguna berada di tab Data Peserta (list) atau Daftar Hadir (attended).
+// Timer dihentikan begitu pindah tab/keluar event/masuk Mode Kiosk, agar tidak
+// membuang request di halaman yang memang tidak menampilkan data peserta.
+const GUEST_AUTO_REFRESH_MS = 5000;
+const GUEST_AUTO_REFRESH_TABS = ["list", "attended"];
+let guestAutoRefreshTimer = null;
+let guestAutoRefreshBusy = false;
+
+// Kondisi halaman (start/stop timer) — hanya dipanggil lewat jalur navigasi
+// yang memanggil window.guestAutoRefreshSync, jadi aman untuk menentukan
+// start/stop lifecycle.
+function guestAutoRefreshAllowed() {
+  if (!window.appState?.currentEventId) return false;
+  const appView = document.getElementById("view-app");
+  if (!appView || appView.classList.contains("view-hidden")) return false;
+  // Kiosk menutupi seluruh tampilan event, jadi bukan halaman data peserta.
+  const kioskView = document.getElementById("kiosk-mode-view");
+  if (kioskView && !kioskView.classList.contains("hidden")) return false;
+  return GUEST_AUTO_REFRESH_TABS.some((tab) =>
+    document.getElementById(`tab-content-${tab}`)?.classList.contains("active"),
+  );
+}
+
+// Kondisi sementara (lewati satu tick saja, timer tetap jalan) — modal/progres/
+// import sedang terbuka berarti pengguna sedang bekerja di atas data; refresh
+// di tengah itu bisa menutup hasil kerjanya.
+function guestAutoRefreshShouldSkip() {
+  if (guestAutoRefreshBusy) return true; // request sebelumnya belum selesai
+  if (document.hidden) return true; // tab di background: browser throttling, skip saja
+  const blocking = ["modal-backdrop", "modal-backdrop-nested", "modal-progress", "modal-import-mode"];
+  return blocking.some((id) => {
+    const el = document.getElementById(id);
+    return el && !el.classList.contains("hidden");
+  });
+}
+
+function stopGuestAutoRefresh() {
+  if (!guestAutoRefreshTimer) return;
+  clearInterval(guestAutoRefreshTimer);
+  guestAutoRefreshTimer = null;
+  document
+    .querySelectorAll(".auto-refresh-icon")
+    .forEach((i) => i.classList.remove("fa-spin"));
+}
+
+function startGuestAutoRefresh() {
+  if (guestAutoRefreshTimer) return;
+  guestAutoRefreshTimer = setInterval(() => {
+    // Jaring pengaman bila ada jalur navigasi yang tidak memanggil sync:
+    // timer menghentikan dirinya sendiri pada tick berikutnya.
+    if (!guestAutoRefreshAllowed()) return stopGuestAutoRefresh();
+    if (guestAutoRefreshShouldSkip()) return;
+    window.refreshGuestData(null, { silent: true });
+  }, GUEST_AUTO_REFRESH_MS);
+}
+
+// Pusat kendali start/stop — dipanggil dari window.switchTab dan
+// window.switchMainViewAnimated (js/ui.js) serta enter/exit Mode Kiosk (js/kiosk.js).
+window.guestAutoRefreshSync = function () {
+  if (guestAutoRefreshAllowed()) startGuestAutoRefresh();
+  else stopGuestAutoRefresh();
+};
+window.stopGuestAutoRefresh = stopGuestAutoRefresh;
 
 window.toggleGuestActionMenu = function (id, button) {
   const existing = document.getElementById("guest-action-menu");
@@ -975,6 +1129,7 @@ window.exportExcel = function (type) {
     };
     if (evt?.needsSeat !== false) r[seat] = g.kursi;
     if (evt?.needsHotel) r["No Kamar"] = g.kamar || "-";
+    addCustomColumns(r, g, evt);
     if (type === "all") r.Status = g.scanned ? "Hadir" : "Belum";
     r["Waktu Absen"] = g.scanTime || "-";
     return r;
@@ -997,8 +1152,27 @@ window.downloadTemplate = function () {
   if (!e || e.needsSeat !== false)
     r[e?.seatLabelType === "meja" ? "No Meja" : "No Kursi"] = "VVIP-1";
   if (e?.needsHotel) r["No Kamar"] = "201";
+  const customCols = customColumns(e);
+  customCols.forEach(({ header }, i) => { r[header] = `${3201000000000000 + i + 1}`; });
   const ws = XLSX.utils.json_to_sheet([r]),
     wb = XLSX.utils.book_new();
+  // Kolom custom diformat sebagai TEKS (termasuk baris kosong di bawahnya) supaya nilai yang
+  // diketik user - mis. NIK 16 digit atau nomor berawalan 0 - tidak diubah Excel jadi angka/3.2E+15.
+  if (customCols.length) {
+    const headers = Object.keys(r);
+    const TEXT_ROWS = 1000;
+    customCols.forEach(({ header }) => {
+      const c = headers.indexOf(header);
+      for (let rowIdx = 1; rowIdx <= TEXT_ROWS; rowIdx++) {
+        const addr = XLSX.utils.encode_cell({ r: rowIdx, c });
+        if (rowIdx === 1) { ws[addr].t = "s"; ws[addr].z = "@"; }
+        else ws[addr] = { t: "s", v: "", z: "@" };
+      }
+    });
+    const range = XLSX.utils.decode_range(ws["!ref"]);
+    range.e.r = Math.max(range.e.r, TEXT_ROWS);
+    ws["!ref"] = XLSX.utils.encode_range(range);
+  }
   XLSX.utils.book_append_sheet(wb, ws, "Template_Import");
   XLSX.writeFile(wb, "Template_Import_Peserta.xlsx");
 };
@@ -1044,6 +1218,7 @@ window.processExportExcel = function (type, sourceGuests, evt) {
       if (type === "all")
         row.Kunci = g.kunciDiambil ? "Sudah Diambil" : "Belum";
     }
+    addCustomColumns(row, g, evt);
     if (type === "all") row.Status = g.scanned ? "Hadir" : "Belum";
     row["Waktu Absen"] = g.scanTime || "-";
     return row;
@@ -1213,7 +1388,7 @@ window.processExcelImport = async function (validRows, evt, mode) {
                 ? row[seatColLabel] || row["No Kursi"] || row["No Meja"] || "-"
                 : "-",
             kamar: evt?.needsHotel ? row["No Kamar"] || "-" : "-",
-            customNumbers: {},
+            customNumbers: readCustomNumbers(row, evt),
             kunciDiambil: false,
             pickupScanned: false,
             pickupScanTime: null,

@@ -134,5 +134,7 @@ window.saveUserPermissions = function() {
     if (window.appState.currentEventId) window.applyFeaturePermissions();
   }
   window.closeModalAnimated('modal-user-permissions');
+  window.renderManageUsers?.();
+  window.refreshUserManageSection?.();
   window.showToast(`${window.currentLang === 'id' ? 'Akses fitur untuk' : 'Feature access for'} ${users[idx].name} ${window.currentLang === 'id' ? 'berhasil diperbarui!' : 'updated successfully!'}`, 'success');
 };

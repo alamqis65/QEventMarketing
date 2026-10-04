@@ -1337,7 +1337,7 @@
                             <button id="btn-download-template" onclick="window.downloadTemplate()" class="bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all flex items-center"><i class="fa-solid fa-download mr-2"></i> <span data-i18n="btn_template">Template</span></button>
                             <input type="file" id="import-excel" accept=".xlsx, .xls" class="hidden" onchange="window.handleImportExcel(event)">
                             <span class="w-px bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></span>
-                            <button id="btn-refresh-guests" onclick="window.refreshGuestData(this)" class="bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all flex items-center" title="Muat ulang data dari server"><i class="fa-solid fa-rotate mr-2"></i> <span data-i18n="btn_refresh">Refresh</span></button>
+                            <span id="badge-auto-refresh-guests" class="auto-refresh-badge bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-400 py-2.5 px-4 rounded-xl text-sm font-semibold flex items-center gap-2 select-none" data-i18n-title="title_auto_refresh" title="Data peserta dimuat ulang otomatis tiap 5 detik"><span class="auto-refresh-dot"></span><i class="fa-solid fa-arrows-rotate auto-refresh-icon"></i> <span data-i18n="badge_auto_refresh">Auto • 5 dtk</span></span>
                             <button id="btn-mark-all-attendance" onclick="window.markAllAttendance()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-4 rounded-xl text-sm font-semibold transition-all flex items-center shadow-md"><i class="fa-solid fa-user-check mr-2"></i> <span data-i18n="btn_mark_all">Absen Semua</span></button>
                             <button id="btn-cancel-all-attendance" onclick="window.cancelAllAttendance()" class="bg-rose-600 hover:bg-rose-700 text-white py-2.5 px-4 rounded-xl text-sm font-semibold transition-all flex items-center shadow-md"><i class="fa-solid fa-user-xmark mr-2"></i> <span data-i18n="btn_cancel_all">Batal Absen Semua</span></button>
                         </div>
@@ -1429,9 +1429,8 @@
                                     <option value="jabatan_asc" data-i18n="opt_sort_jabatan_asc">Jabatan (A-Z)</option>
                                     <option value="jabatan_desc" data-i18n="opt_sort_jabatan_desc">Jabatan (Z-A)</option>
                                 </select>
-                                <button id="btn-refresh-attended" onclick="window.refreshGuestData(this)" class="bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 py-2 px-4 rounded-xl text-sm font-semibold transition-all flex items-center whitespace-nowrap" title="Muat ulang data dari server">
-                                    <i class="fa-solid fa-rotate mr-2 hidden sm:inline"></i> <span data-i18n="btn_refresh">Refresh</span>
-                                </button>
+                                <span id="badge-auto-refresh-attended" class="auto-refresh-badge bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-400 py-2 px-4 rounded-xl text-sm font-semibold flex items-center gap-2 whitespace-nowrap select-none" data-i18n-title="title_auto_refresh" title="Data peserta dimuat ulang otomatis tiap 5 detik"><span class="auto-refresh-dot"></span><i class="fa-solid fa-arrows-rotate auto-refresh-icon hidden sm:inline"></i> <span data-i18n="badge_auto_refresh">Auto • 5 dtk</span>
+                                </span>
                                 <button id="btn-export-excel-attended" onclick="window.exportExcel('attended')" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-xl text-sm font-semibold transition-all flex items-center shadow-sm whitespace-nowrap" title="Export Daftar Hadir">
                                     <i class="fa-solid fa-file-excel mr-2 hidden sm:inline"></i> <span data-i18n="btn_export_att">Export Excel</span>
                                 </button>
@@ -2552,6 +2551,14 @@
         <i id="toast-icon" class="fa-solid fa-circle-check text-xl"></i>
         <span id="toast-msg">Success!</span>
     </div>
+
+    <!-- Persistence status; managed by js/cache.js -->
+    <button id="save-status" type="button"
+        class="save-status hidden fixed bottom-6 left-6 z-[90] items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium shadow-lg transition-colors"
+        aria-live="polite" aria-atomic="true" aria-label="Status penyimpanan">
+        <i id="save-status-icon" class="fa-solid"></i>
+        <span id="save-status-text"></span>
+    </button>
 
     <script src="js/config.js"></script>
     <script src="js/cache.js"></script>

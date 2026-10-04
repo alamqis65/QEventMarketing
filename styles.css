@@ -325,3 +325,23 @@
            bisa dipastikan, jadi tidak aman mengandalkan urutan kelas biasa untuk override warna border). */
         .custom-number-dup-border { border-color: #f59e0b !important; }
         html.dark .custom-number-dup-border { border-color: #f59e0b !important; }
+
+        /* ===== Badge Auto-Refresh Data Peserta ===== */
+        /* Penanda bawaan bahwa data peserta (Daftar Seluruh Peserta & Rekap Kehadiran)
+           ditarik ulang dari server otomatis tiap 5 detik (lihat window.guestAutoRefreshSync
+           di js/guests.js), menggantikan tombol Refresh manual. Titik hijau berdenyut sebagai
+           indikator "hidup" tanpa animasi yang mengganggu saat menatap tabel. */
+        .auto-refresh-dot {
+            width: 8px; height: 8px; border-radius: 9999px; background: #10b981;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+            animation: auto-refresh-dot-pulse 1.8s ease-out infinite;
+            flex-shrink: 0;
+        }
+        @keyframes auto-refresh-dot-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+            70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .auto-refresh-dot { animation: none; }
+        }

@@ -19,7 +19,14 @@ window.showToast = function(msg, type = 'success') {
 // window.closeModalAnimated, & handler tombol Escape.
 const NESTED_MODAL_IDS = ['modal-user-form', 'modal-user-permissions', 'modal-export-auth', 'modal-kiosk-exit-pin', 'modal-confirm', 'modal-cropper', 'modal-edit-custom-qr', 'modal-edit-custom-barcode', 'modal-signature', 'modal-preview-signature'];
 
+// Timer penyembunyian per-modal. closeModalAnimated menjadwalkan "hidden" setelah 400ms; kalau modal yang
+// SAMA dibuka lagi sebelum timer itu jalan (mis. dialog konfirmasi yang dibuka ulang oleh respons server
+// beberapa milidetik setelah ditutup), timer lama harus dibatalkan - kalau tidak, modal yang baru dibuka
+// langsung disembunyikan lagi (tampak "berkedip" lalu hilang).
+const modalHideTimers = {};
+
 window.openModalAnimated = function(id) {
+    if (modalHideTimers[id]) { clearTimeout(modalHideTimers[id]); delete modalHideTimers[id]; }
     const backdrop = NESTED_MODAL_IDS.includes(id) ? document.getElementById('modal-backdrop-nested') : document.getElementById('modal-backdrop');
     const modal = document.getElementById(id);
     if (!modal || !backdrop) return;
@@ -32,6 +39,9 @@ window.openModalAnimated = function(id) {
 };
 
 window.closeModalAnimated = function(id) {
+    // Safety net: whatever changed inside the user-management modal (add/edit/delete/permissions),
+    // the Settings "Manajemen Pengguna" section is refreshed when the modal is closed.
+    if (id === 'modal-manage-users') window.refreshUserManageSection?.();
     const isNested = NESTED_MODAL_IDS.includes(id);
     const backdrop = isNested ? document.getElementById('modal-backdrop-nested') : document.getElementById('modal-backdrop');
     const modal = document.getElementById(id);
@@ -49,7 +59,9 @@ window.closeModalAnimated = function(id) {
         return found;
     };
     if (!anyOtherSharingBackdrop()) backdrop.classList.remove('show');
-    setTimeout(() => {
+    if (modalHideTimers[id]) clearTimeout(modalHideTimers[id]);
+    modalHideTimers[id] = setTimeout(() => {
+        delete modalHideTimers[id];
         modal.classList.add('hidden'); modal.classList.remove('flex');
         if (!anyOtherSharingBackdrop()) backdrop.classList.add('hidden');
     }, 400);
@@ -136,6 +148,9 @@ function switchMainViewAnimated(viewName) {
         if(v === viewName) { el.classList.remove('view-hidden'); el.classList.add('view-visible'); }
         else { el.classList.add('view-hidden'); el.classList.remove('view-visible'); }
     });
+    // Auto-refresh data peserta cuma boleh jalan selama view-app tampil;
+    // begitu pindah ke Library/Pengaturan/Tools/tutup app, polling-nya dihentikan.
+    window.guestAutoRefreshSync?.();
 }
 window.switchMainViewAnimated = switchMainViewAnimated;
 window.toggleSwitchMainView = function(viewName) { switchMainViewAnimated(viewName); };
@@ -144,7 +159,11 @@ window.switchTab = function(tabName) {
     document.querySelectorAll('#view-app nav button').forEach(btn => btn.classList.remove('tab-active'));
     document.querySelectorAll('.app-tab').forEach(sec => sec.classList.remove('active'));
     document.getElementById(`tab-${tabName}`).classList.add('tab-active');
-    setTimeout(() => { document.getElementById(`tab-content-${tabName}`).classList.add('active'); }, 10);
+    setTimeout(() => {
+        document.getElementById(`tab-content-${tabName}`).classList.add('active');
+        // Sync sesudah kelas active berubah agar tab list/attended bisa memulai timer.
+        window.guestAutoRefreshSync?.();
+    }, 10);
     if (tabName === 'read') setTimeout(() => window.initScanner(), 300); else window.stopScanner();
     if (tabName === 'list' || tabName === 'attended') window.renderTable();
     if (tabName === 'dashboard') window.renderDashboard();
@@ -206,13 +225,16 @@ window.executeDelete = function() {
     const type = document.getElementById('confirm-type').value; const id = document.getElementById('confirm-id').value;
     if(type === 'event') {
         let events = LS.getEvents(); events = events.filter(e => e.id !== id); LS.setEvents(events);
-        LS.removeGuests(id); renderEvents(); window.showToast('Event dihapus.', 'error');
+        // Deleting the event cascades to guests in PostgreSQL. Do not also
+        // issue an independent guests DELETE, which could bypass the event's
+        // confirmation flow and erase participants even when the user declines.
+        renderEvents(); window.showToast('Event dihapus.', 'error');
     } else if (type === 'guest') {
         window.guests = window.guests.filter(g => g.id !== id); saveGuests(); window.renderTable(); window.showToast('Data peserta dihapus', 'error');
     } else if (type === 'user') {
         let users = LS.getUsers(); const userToDelete = users.find(u => u.username === id);
         if(userToDelete && userToDelete.isSuperAdmin) window.showToast('Akun Super Admin tidak dapat dihapus!', 'error');
-        else { users = users.filter(u => u.username !== id); LS.setUsers(users); window.renderManageUsers(); window.updateSettingsUserCountBadge?.(); window.showToast('Akun berhasil dihapus', 'warning'); }
+        else { users = users.filter(u => u.username !== id); LS.setUsers(users); window.renderManageUsers(); window.refreshUserManageSection?.(); window.showToast('Akun berhasil dihapus', 'warning'); }
     } else if (type === 'custom-qr') {
         let qrs = LS.getCustomQRs(); qrs = qrs.filter(q => q.id !== id); LS.setCustomQRs(qrs); window.renderCustomQRs(); window.showToast('QR Code kustom berhasil dihapus', 'error');
     } else if (type === 'custom-barcode') {

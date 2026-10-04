@@ -2,6 +2,10 @@
 
 const dict = {
     id: {
+        save_status_saving: "Menyimpan…", save_status_saved: "Tersimpan",
+        save_status_failed: "GAGAL", save_status_retry: "klik untuk mencoba lagi",
+        save_confirm_del_title: "Konfirmasi Penghapusan Besar",
+        save_confirm_del_sub: "Server menolak: {n} dari {t} data ({p}%) akan terhapus. Lanjutkan?",
         app_title: "EventQ", login_subtitle: "Masuk ke akun Anda untuk melanjutkan",
         sub_admin: "Masuk sebagai Admin untuk mengelola event", sub_public: "Masuk sebagai Public untuk akses event",
         auth_bg_title: "Kelola Event Lebih Mudah", auth_bg_sub: "Generate QR Code, pantau kehadiran, dan kelola data peserta secara real-time dalam satu platform.",
@@ -29,6 +33,7 @@ const dict = {
         lbl_seat_label_type: "Jenis nomor yang digunakan:", opt_seat_kursi: "Nomor Kursi", opt_seat_meja: "Nomor Meja",
         btn_gen_qr: "Generate QR Code", scan_title: "Scan QR Code Kehadiran", scan_sub: "Arahkan kamera ke QR Code peserta atau unggah file gambar QR.",
         btn_bulk_qr: "Bulk Download QR", btn_export: "Export Excel", btn_export_att: "Export Excel", btn_import: "Import Excel", btn_template: "Template", btn_refresh: "Refresh",
+        badge_auto_refresh: "Auto • 5 dtk", title_auto_refresh: "Data peserta dimuat ulang otomatis tiap 5 detik",
         list_title: "Daftar Seluruh Peserta", lbl_status: "Status", lbl_action: "Aksi", txt_empty_guest: "Belum ada data peserta terdaftar.",
         att_title: "Rekap Kehadiran", lbl_time: "Waktu Masuk", txt_empty_att: "Belum ada peserta yang check-in.",
         modal_event_title: "Buat Event Baru", lbl_event_name: "Nama Event", lbl_event_type: "Jenis Acara", lbl_event_date: "Tanggal & Waktu Mulai", lbl_event_logo: "Logo Event (Opsional)", btn_cancel: "Batal", btn_save: "Simpan", btn_confirm: "Ya, Lanjutkan",
@@ -182,6 +187,10 @@ const dict = {
         title_sort_library: "Urutkan Event", opt_sort_default_lib: "Urutan Bawaan", opt_sort_az: "Nama (A-Z)", opt_sort_za: "Nama (Z-A)"
     },
     en: {
+        save_status_saving: "Saving…", save_status_saved: "Saved",
+        save_status_failed: "FAILED", save_status_retry: "click to retry",
+        save_confirm_del_title: "Confirm Large Deletion",
+        save_confirm_del_sub: "Server rejected: {n} of {t} records ({p}%) would be deleted. Continue?",
         app_title: "EventQ", login_subtitle: "Log in to your account to continue",
         sub_admin: "Login as Admin to manage events", sub_public: "Login as Public to access events",
         auth_bg_title: "Manage Events with Ease", auth_bg_sub: "Generate QR Codes, track attendance, and manage participant data in real-time, all in one platform.",
@@ -209,6 +218,7 @@ const dict = {
         lbl_seat_label_type: "Type of number used:", opt_seat_kursi: "Seat Number", opt_seat_meja: "Table Number",
         btn_gen_qr: "Generate QR Code", scan_title: "Scan Attendance QR Code", scan_sub: "Point camera at participant QR Code or upload file.",
         btn_bulk_qr: "Bulk Download QR", btn_export: "Export Excel", btn_export_att: "Export Excel", btn_import: "Import Excel", btn_template: "Template", btn_refresh: "Refresh",
+        badge_auto_refresh: "Auto • 5s", title_auto_refresh: "Participant data auto-reloads every 5 seconds",
         list_title: "All Participant List", lbl_status: "Status", lbl_action: "Action", txt_empty_guest: "No participant data registered yet.",
         att_title: "Attendance Recap", lbl_time: "Time In", txt_empty_att: "No participants have checked in yet.",
         modal_event_title: "Create New Event", lbl_event_name: "Event Name", lbl_event_type: "Event Type", lbl_event_date: "Start Date & Time", lbl_event_logo: "Event Logo (Optional)", btn_cancel: "Cancel", btn_save: "Save", btn_confirm: "Yes, Continue",

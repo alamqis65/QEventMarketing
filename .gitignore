@@ -1,0 +1,42 @@
+# --- Python ---
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Environment / secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Node (kalau nanti ada) ---
+node_modules/
+npm-debug.log*
+yarn-error.log*
+dist/
+build/
+
+# --- Editor / OS ---
+.vscode/*
+!.vscode/settings.json
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# --- Claude local ---
+.claude/settings.local.json
+
+# --- Logs & runtime ---
+*.log
+logs/
+*.pid
+
+# --- Database dumps lokal ---
+*.sqlite3
+*.db

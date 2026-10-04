@@ -187,6 +187,7 @@ window.handleUserFormSubmit = function (e) {
   LS.setUsers(users);
   window.closeModalAnimated("modal-user-form");
   window.renderManageUsers();
+  window.refreshUserManageSection();
 };
 
 window.deleteUserAcc = function (username) {
@@ -255,6 +256,12 @@ window.executeExportUsers = function (e) {
 
 const userText = (v) => String(v ?? "");
 const userEsc = (v) => userText(v).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;", "'":"&#39;"}[c]));
+
+// Refresh the "Manajemen Pengguna" card in Settings (user count badge + summary list)
+// so it always mirrors changes made inside modal-manage-users / permissions modal.
+window.refreshUserManageSection = function () {
+  window.updateSettingsUserCountBadge?.();
+};
 
 window.updateSettingsUserCountBadge = function () {
   const el = document.getElementById("settings-user-count");
